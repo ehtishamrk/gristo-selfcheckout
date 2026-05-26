@@ -287,6 +287,9 @@ try {
 // ── STATE ──────────────────────────────────────
 let menu = [], deals = [], settings = { tableCount: 10 };
 let cart = {}, orderType = 'dine_in', selTable = null, lastOrder = null;
+  let lastOrderId = null;
+let lastOrderTime = null;
+let modificationNote = "";
 
 // ── CATEGORIES ─────────────────────────────────
 const CATS = [
