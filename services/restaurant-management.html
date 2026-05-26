@@ -252,10 +252,27 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <p class="succ-sub">Your order has been received</p>
   <div class="order-num" id="s-num">#0000</div>
   <p class="succ-sub" id="s-type">Dine In · Table 1</p>
-  <div class="succ-acts">
-    <button class="btn btn-gold" onclick="printReceipt()">🖨&nbsp; Print Receipt</button>
-    <button class="btn btn-ghost" onclick="newOrder()">New Order</button>
-  </div>
+<div class="succ-acts" id="success-actions">
+  <button class="btn btn-gold" onclick="viewOrder()">
+    👁️&nbsp; View Order
+  </button>
+
+  <button class="btn btn-ghost" id="edit-order-btn"
+    style="display:none"
+    onclick="editOrder()">
+    ✏️&nbsp; Edit Order
+  </button>
+
+  <button class="btn btn-ghost" id="add-items-btn"
+    style="display:none"
+    onclick="addItemsToOrder()">
+    ➕&nbsp; Add Items To Order
+  </button>
+
+  <button class="btn btn-ghost" onclick="newOrder()">
+    New Order
+  </button>
+</div>
 </div>
 
 </div><!-- #app -->
@@ -290,6 +307,8 @@ let cart = {}, orderType = 'dine_in', selTable = null, lastOrder = null;
   let lastOrderId = null;
 let lastOrderTime = null;
 let modificationNote = "";
+  let orderMode = 'new'; 
+// new | edit | addition
 
 // ── CATEGORIES ─────────────────────────────────
 const CATS = [
@@ -677,6 +696,42 @@ function buildTableGrid() {
   }
 }
 
+  function canModifyOrder() {
+  if (!lastOrderTime) return false;
+
+  const fiveMinutes = 5 * 60 * 1000;
+  return (Date.now() - lastOrderTime) <= fiveMinutes;
+}
+function viewOrder() {
+  renderCart();
+  goTo('sc');
+}
+
+function editOrder() {
+  if (!canModifyOrder()) {
+    toast('Order can only be edited within 5 minutes');
+    return;
+  }
+
+  orderMode = 'edit';
+  modificationNote =
+    `Edited order of previous order (#${lastOrder.orderNumber})`;
+
+  goTo('sm');
+}
+
+function addItemsToOrder() {
+  if (!canModifyOrder()) {
+    toast('You can only add items within 5 minutes');
+    return;
+  }
+
+  orderMode = 'addition';
+  modificationNote =
+    `Additional order for previous order (#${lastOrder.orderNumber})`;
+
+  goTo('sm');
+}
 // ── PLACE ORDER ─────────────────────────────────
 async function placeOrder() {
   const name = document.getElementById('cust-name').value.trim();
@@ -706,9 +761,17 @@ async function placeOrder() {
   } catch(e) { console.warn('Save order:', e); }
 
   lastOrder = order;
+lastOrderTime = Date.now();
   document.getElementById('s-num').textContent = '#'+order.orderNumber;
 document.getElementById('s-type').textContent = orderType==='dine_in'
     ? `Dine In · Table ${selTable} · ${name}` : `Takeaway · ${name}`;
+  const canModify = canModifyOrder();
+
+document.getElementById('edit-order-btn').style.display =
+  canModify ? 'flex' : 'none';
+
+document.getElementById('add-items-btn').style.display =
+  canModify ? 'flex' : 'none';
   goTo('ss');
   // setTimeout(printReceipt, 900); // <-- Disabled customer printing
 }
@@ -740,6 +803,12 @@ function printReceipt() {
 <div style="font-size:10px;line-height:1.6">
   <div>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
   <div>Order <b>#${o.orderNumber}</b></div>
+
+${modificationNote ? `
+<div style="margin-top:4px;color:#444">
+  <b>${modificationNote}</b>
+</div>
+` : ''}
   <div>Type: <b>${o.orderType==='dine_in'?`Dine In — Table ${o.tableNumber}`:'Takeaway'}</b></div>
   <div>Customer: <b>${o.customerName}</b></div>
 </div>
@@ -764,6 +833,9 @@ function printReceipt() {
 // ── SUCCESS & RESET ─────────────────────────────
 function newOrder() {
   cart = {}; orderType = 'dine_in'; selTable = null;
+  orderMode = 'new';
+modificationNote = '';
+lastOrderTime = null;
   document.getElementById('cust-name').value = '';
   document.getElementById('tbl-grid').querySelectorAll('.tbl-btn').forEach(b=>b.classList.remove('sel'));
   goToMenu();
