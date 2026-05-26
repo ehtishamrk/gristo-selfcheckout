@@ -1,0 +1,26 @@
+{
+  "name": "GRISTO Self Checkout",
+  "short_name": "GRISTO",
+  "description": "GRISTO Restaurant Self Checkout — Order directly from your table",
+  "start_url": "/services/restaurant-management.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "shopping"],
+  "lang": "en"
+}

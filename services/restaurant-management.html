@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GRISTO">
+<title>GRISTO — Self Checkout</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--s2:#1C1C1C;--s3:#252525;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --gold:#C8922A;--gold-l:#E8B84B;--gold-d:rgba(200,146,42,0.14);
+  --text:#F5F0E8;--tm:#9A8F80;--td:#5E5650;
+  --green:#4A9B6F;--red:#C84242;--blue:#4A7FC8;
+  --r:16px;--rs:8px;--rl:24px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.5;overflow:hidden;}
+#app{height:100%;position:relative;overflow:hidden;}
+
+/* SCREENS */
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden;}
+.screen.active{display:flex;}
+.fade-in{animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+/* WELCOME */
+#sw{align-items:center;justify-content:center;background:var(--bg);}
+.wb{position:absolute;inset:0;background:radial-gradient(ellipse 700px 500px at 50% 25%,rgba(200,146,42,.11) 0%,transparent 70%),radial-gradient(ellipse 400px 600px at 85% 85%,rgba(139,69,19,.07) 0%,transparent 60%);}
+.wc{position:relative;text-align:center;padding:40px 30px;}
+.logo-ring{width:96px;height:96px;border-radius:50%;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;position:relative;}
+.logo-ring::before{content:'';position:absolute;inset:7px;border-radius:50%;border:1px solid rgba(200,146,42,.25);}
+.logo-g{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:700;color:var(--gold);}
+.wt{font-family:'Cormorant Garamond',serif;font-size:46px;font-weight:600;letter-spacing:7px;color:var(--text);margin-bottom:6px;}
+.ws{font-size:11px;color:var(--td);letter-spacing:3.5px;text-transform:uppercase;margin-bottom:52px;}
+.wf{font-size:12px;color:var(--td);margin-top:40px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .18s ease;border-radius:100px;}
+.btn-gold{background:var(--gold);color:#0A0A0A;padding:16px 48px;font-size:15px;letter-spacing:.5px;}
+.btn-gold:hover{background:var(--gold-l);transform:translateY(-1px);}
+.btn-gold:active{transform:translateY(0);}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);padding:14px 32px;font-size:14px;}
+.btn-ghost:hover{border-color:var(--border2);background:var(--s2);}
+.btn-full{width:100%;}
+.btn-sm{padding:8px 20px;font-size:13px;border-radius:var(--rs);}
+
+/* SCREEN HEADER */
+.sh{padding:14px 18px 11px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;position:relative;z-index:10;}
+.sh-brand{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:700;color:var(--gold);letter-spacing:3px;flex:1;}
+.sh-sub{font-size:11px;color:var(--td);}
+.back-btn{width:34px;height:34px;border-radius:50%;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:17px;flex-shrink:0;transition:background .15s;}
+.back-btn:hover{background:var(--s3);}
+
+/* CATEGORY BAR */
+.cat-bar{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;display:flex;gap:7px;}
+.cat-bar::-webkit-scrollbar{display:none;}
+.cat-chip{display:flex;align-items:center;gap:5px;padding:6px 13px;border-radius:100px;border:1px solid var(--border);background:var(--surface);color:var(--tm);font-size:12.5px;font-weight:500;white-space:nowrap;cursor:pointer;transition:all .18s ease;flex-shrink:0;}
+.cat-chip.active{background:var(--gold);color:#0A0A0A;border-color:var(--gold);font-weight:600;}
+.cat-chip:hover:not(.active){border-color:var(--border2);background:var(--s2);}
+
+/* MENU */
+.menu-scroll{flex:1;overflow-y:auto;padding:14px;padding-bottom:100px;scrollbar-width:thin;scrollbar-color:var(--s3) transparent;}
+.cat-label{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--tm);margin-bottom:11px;margin-top:6px;letter-spacing:.5px;}
+.items-col{display:flex;flex-direction:column;gap:9px;margin-bottom:22px;}
+
+/* ITEM CARD */
+.item-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px;display:flex;gap:11px;align-items:flex-start;transition:border-color .2s;position:relative;}
+.item-card:hover{border-color:rgba(255,255,255,.11);}
+.item-card.in-cart{border-color:rgba(200,146,42,.38);}
+.item-card.unavail{opacity:.45;pointer-events:none;}
+.unavail-tag{position:absolute;top:10px;right:10px;background:var(--s3);color:var(--td);font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.item-photo{width:70px;height:70px;border-radius:11px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;overflow:hidden;}
+.item-photo img{width:100%;height:100%;object-fit:cover;}
+.item-info{flex:1;min-width:0;}
+.item-name{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3;}
+.item-desc{font-size:11.5px;color:var(--td);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:8px;}
+.item-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.item-price{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--gold);}
+.item-price .op{font-size:12px;color:var(--td);text-decoration:line-through;margin-right:3px;font-family:'DM Sans',sans-serif;font-weight:400;}
+.deal-tag{font-size:9px;font-weight:700;background:var(--gold-d);color:var(--gold-l);border-radius:4px;padding:1px 5px;font-family:'DM Sans',sans-serif;vertical-align:middle;letter-spacing:.3px;}
+
+/* QTY CONTROL */
+.qty-ctrl{display:flex;align-items:center;gap:7px;}
+.qbtn{width:27px;height:27px;border-radius:50%;border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;line-height:1;flex-shrink:0;}
+.qbtn:hover{background:var(--s3);}
+.qbtn.plus{background:var(--gold);border-color:var(--gold);color:#0A0A0A;}
+.qbtn.plus:hover{background:var(--gold-l);}
+.qnum{font-size:14px;font-weight:600;min-width:18px;text-align:center;}
+
+/* CART BAR */
+.cart-bar{position:fixed;bottom:18px;left:14px;right:14px;background:var(--gold);border-radius:100px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transform:translateY(100px);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:100;box-shadow:0 8px 30px rgba(200,146,42,.3);}
+.cart-bar.vis{transform:translateY(0);}
+.cb-left{display:flex;align-items:center;gap:9px;}
+.cb-badge{background:#0A0A0A;color:var(--gold);font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.cb-label{font-size:13.5px;font-weight:600;color:#0A0A0A;}
+.cb-total{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:#0A0A0A;}
+
+/* CART */
+#sc{background:var(--bg);}
+.cart-list{flex:1;overflow-y:auto;padding:14px;padding-bottom:10px;}
+.cart-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:9px;}
+.ci-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.ci-name{font-size:13.5px;font-weight:600;flex:1;line-height:1.3;}
+.ci-price{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:700;color:var(--gold);white-space:nowrap;}
+.ci-row{display:flex;align-items:center;justify-content:space-between;margin-top:9px;}
+.add-note{font-size:11px;color:var(--gold);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;font-family:'DM Sans',sans-serif;}
+.note-ta{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;padding:7px 10px;margin-top:8px;resize:none;outline:none;transition:border-color .2s;height:56px;}
+.note-ta:focus{border-color:rgba(200,146,42,.4);}
+.note-ta::placeholder{color:var(--td);}
+.cart-sum{background:var(--s2);border-top:1px solid var(--border);padding:14px 18px;flex-shrink:0;}
+.sum-row{display:flex;justify-content:space-between;margin-bottom:7px;font-size:13.5px;color:var(--tm);}
+.sum-row.total{font-size:19px;font-weight:700;color:var(--text);margin-top:9px;padding-top:9px;border-top:1px solid var(--border);margin-bottom:13px;font-family:'Cormorant Garamond',serif;}
+.deal-row{font-size:11.5px;color:var(--gold);background:var(--gold-d);border-radius:var(--rs);padding:5px 10px;margin-bottom:7px;display:flex;align-items:center;gap:5px;}
+
+/* DETAILS */
+#sd{background:var(--bg);}
+.d-content{flex:1;overflow-y:auto;padding:22px 18px 40px;}
+.sec-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:18px;color:var(--text);}
+.ot-toggle{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:4px;margin-bottom:26px;}
+.ot-opt{flex:1;padding:11px;border-radius:100px;border:none;background:transparent;color:var(--tm);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .22s ease;font-family:'DM Sans',sans-serif;text-align:center;}
+.ot-opt.active{background:var(--gold);color:#0A0A0A;}
+.fg{margin-bottom:18px;}
+.fl{display:block;font-size:11px;font-weight:700;color:var(--td);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:7px;}
+.fi{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:15px;font-family:'DM Sans',sans-serif;padding:13px 15px;outline:none;transition:border-color .2s;}
+.fi:focus{border-color:rgba(200,146,42,.5);}
+.fi::placeholder{color:var(--td);}
+.tbl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;}
+.tbl-btn{aspect-ratio:1;border-radius:var(--rs);background:var(--surface);border:1px solid var(--border);color:var(--tm);font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;}
+.tbl-btn.sel{background:var(--gold);border-color:var(--gold);color:#0A0A0A;}
+.tbl-btn:hover:not(.sel){border-color:var(--border2);}
+.d-footer{padding:14px 18px;border-top:1px solid var(--border);flex-shrink:0;}
+
+/* SUCCESS */
+#ss{background:var(--bg);align-items:center;justify-content:center;text-align:center;padding:40px 28px;}
+.succ-icon{width:88px;height:88px;border-radius:50%;background:rgba(74,155,111,.14);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 22px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1);}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.succ-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;margin-bottom:6px;}
+.succ-sub{font-size:13px;color:var(--tm);}
+.order-num{font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700;color:var(--gold);margin:18px 0;}
+.succ-acts{display:flex;flex-direction:column;gap:11px;width:100%;max-width:270px;margin:0 auto;margin-top:10px;}
+
+/* MISC */
+.spinner{width:34px;height:34px;border:2px solid var(--s3);border-top-color:var(--gold);border-radius:50%;animation:spin .75s linear infinite;margin:50px auto;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--tm);}
+.empty-emoji{font-size:46px;margin-bottom:14px;}
+.empty h3{font-size:17px;margin-bottom:6px;color:var(--text);}
+.empty p{font-size:13px;}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--s3);border:1px solid var(--border2);color:var(--text);padding:9px 18px;border-radius:100px;font-size:12.5px;white-space:nowrap;opacity:0;transition:all .28s ease;z-index:200;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px;}
+@media(min-width:600px){
+  .cart-bar{max-width:520px;left:50%;right:auto;transform:translateX(-50%) translateY(100px);}
+  .cart-bar.vis{transform:translateX(-50%) translateY(0);}
+  .item-photo{width:80px;height:80px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- WELCOME SCREEN -->
+<div id="sw" class="screen active">
+  <div class="wb"></div>
+  <div class="wc">
+    <div class="logo-ring"><span class="logo-g">G</span></div>
+    <h1 class="wt">GRISTO</h1>
+    <p class="ws">Self Checkout</p>
+    <button class="btn btn-gold" onclick="goToMenu()">Start Ordering →</button>
+    <p class="wf">Scan • Select • Enjoy</p>
+  </div>
+</div>
+
+<!-- MENU SCREEN -->
+<div id="sm" class="screen">
+  <div class="sh">
+    <div class="sh-brand">GRISTO</div>
+    <div id="h-time" class="sh-sub"></div>
+  </div>
+  <div class="cat-bar" id="cat-bar"></div>
+  <div class="menu-scroll" id="menu-scroll">
+    <div class="spinner" id="m-loader"></div>
+    <div id="m-container"></div>
+  </div>
+  <div class="cart-bar" id="cart-bar" onclick="goToCart()">
+    <div class="cb-left">
+      <div class="cb-badge" id="cb-count">0</div>
+      <span class="cb-label">View Order</span>
+    </div>
+    <span class="cb-total" id="cb-total">$0.00</span>
+  </div>
+</div>
+
+<!-- CART SCREEN -->
+<div id="sc" class="screen">
+  <div class="sh">
+    <button class="back-btn" onclick="goTo('sm')">←</button>
+    <div class="sh-brand">Your Order</div>
+    <button class="btn btn-ghost btn-sm" onclick="clearCart()" style="border-radius:100px;padding:6px 14px;font-size:12px;">Clear</button>
+  </div>
+  <div class="cart-list" id="cart-list"></div>
+  <div class="cart-sum">
+    <div id="deals-container"></div>
+    <div class="sum-row"><span>Subtotal</span><span id="c-subtotal">$0.00</span></div>
+    <div class="sum-row" id="saving-row" style="display:none"><span style="color:var(--gold)">🏷 You Save</span><span id="c-saving" style="color:var(--gold)"></span></div>
+    <div class="sum-row total"><span>Total</span><span id="c-total">$0.00</span></div>
+    <button class="btn btn-gold btn-full" onclick="goToDetails()">Checkout →</button>
+  </div>
+</div>
+
+<!-- DETAILS SCREEN -->
+<div id="sd" class="screen">
+  <div class="sh">
+    <button class="back-btn" onclick="goTo('sc');renderCart();">←</button>
+    <div class="sh-brand">Your Details</div>
+  </div>
+  <div class="d-content">
+    <p class="sec-title">How would you like your order?</p>
+    <div class="ot-toggle">
+      <button class="ot-opt active" id="btn-di" onclick="setType('dine_in')">🍽&nbsp; Dine In</button>
+      <button class="ot-opt" id="btn-to" onclick="setType('takeaway')">📦&nbsp; Takeaway</button>
+    </div>
+    <div class="fg">
+      <label class="fl">Your Name</label>
+      <input type="text" id="cust-name" class="fi" placeholder="Enter your name" autocomplete="given-name">
+    </div>
+    <div id="tbl-sec">
+      <div class="fg">
+        <label class="fl">Select Table</label>
+        <div class="tbl-grid" id="tbl-grid"></div>
+      </div>
+    </div>
+  </div>
+  <div class="d-footer">
+    <button class="btn btn-gold btn-full" onclick="placeOrder()">Place Order →</button>
+  </div>
+</div>
+
+<!-- SUCCESS SCREEN -->
+<div id="ss" class="screen">
+  <div class="succ-icon">✓</div>
+  <h2 class="succ-title">Order Placed!</h2>
+  <p class="succ-sub">Your order has been received</p>
+  <div class="order-num" id="s-num">#0000</div>
+  <p class="succ-sub" id="s-type">Dine In · Table 1</p>
+  <div class="succ-acts">
+    <button class="btn btn-gold" onclick="printReceipt()">🖨&nbsp; Print Receipt</button>
+    <button class="btn btn-ghost" onclick="newOrder()">New Order</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════════
+// ★ FIREBASE CONFIG — replace with your config ★
+// ════════════════════════════════════════════════
+const FB_CONFIG = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+let db = null;
+try {
+  firebase.initializeApp(FB_CONFIG);
+  db = firebase.firestore();
+} catch(e) { console.warn('Firebase:', e.message); }
+
+// ── STATE ──────────────────────────────────────
+let menu = [], deals = [], settings = { tableCount: 10 };
+let cart = {}, orderType = 'dine_in', selTable = null, lastOrder = null;
+
+// ── CATEGORIES ─────────────────────────────────
+const CATS = [
+  {id:'bbq',       name:'BBQ & Platters', e:'🔥'},
+  {id:'rolls',     name:'Rolls',          e:'🫓'},
+  {id:'rice_bowls',name:'Rice Bowls',     e:'🍚'},
+  {id:'karahi',    name:'Karahi & Curry', e:'🥘'},
+  {id:'street',    name:'Street Food',    e:'🥙'},
+  {id:'burgers',   name:'Burgers',        e:'🍔'},
+  {id:'breads',    name:'Breads',         e:'🫓'},
+  {id:'sides',     name:'Sides & Extras', e:'🍟'},
+  {id:'desserts',  name:'Desserts',       e:'🍮'},
+  {id:'drinks',    name:'Drinks',         e:'🥤'},
+];
+const CE = Object.fromEntries(CATS.map(c=>[c.id,c.e]));
+
+// ── FALLBACK MENU ───────────────────────────────
+const DEFAULT_MENU = [
+  // BBQ
+  {id:'b1',name:'2 Bite BBQ Platter (7 Kabobs)',desc:'Beef Bihari, Chicken Bihari, Malai Boti, Chicken Tikka, Beef Seekh, Chicken Seekh & Paneer Tikka. Served with mint yogurt & tamarind chutney.',price:22.99,cat:'bbq',img:'',avail:true},
+  {id:'b2',name:'3 Bite BBQ Platter (7 Kabobs)',desc:'Generous 21-piece BBQ Platter with seven 3-bite kabobs. Garnished and served with chutneys.',price:28.99,cat:'bbq',img:'',avail:true},
+  {id:'b3',name:'Chicken BBQ Platter',desc:'Chicken Tikka, Malai Boti, Bihari, Seekh Kabob, Leg Tikka and Paneer Tikka. Served with mint yogurt and tamarind chutney.',price:27.99,cat:'bbq',img:'',avail:true},
+  {id:'b4',name:'Mix BBQ Platter',desc:'7 kabobs: Beef Bihari, Chicken Bihari, Chicken Tikka, Chicken Malai, Beef Seekh, Chicken Seekh & Paneer Tikka.',price:32.99,cat:'bbq',img:'',avail:true},
+  {id:'b5',name:'Beef Bihari',desc:'Specially cut beef slices marinated in exotic herbs and spices, BBQed to perfection. Served with mint yogurt and tamarind chutney.',price:12.99,cat:'bbq',img:'',avail:true},
+  {id:'b6',name:'Beef Seekh Kabob',desc:'Minced Beef mixed in exotic spices and herbs, BBQed. Served with mint yogurt and tamarind chutney.',price:12.99,cat:'bbq',img:'',avail:true},
+  {id:'b7',name:'Chicken Bihari',desc:'Chicken cubes marinated in exotic herbs and spices, BBQed perfectly. Served with mint yogurt and tamarind chutney.',price:12.99,cat:'bbq',img:'',avail:true},
+  {id:'b8',name:'Chicken Malai Boti',desc:'Chicken cubes marinated in exotic spices and herbs. BBQed and served with mint yogurt and tamarind chutney.',price:11.99,cat:'bbq',img:'',avail:true},
+  {id:'b9',name:'Chicken Seekh Kabob',desc:'Chicken mixed in exotic spices and herbs, BBQed. Served with mint yogurt and tamarind chutney.',price:11.99,cat:'bbq',img:'',avail:true},
+  {id:'b10',name:'Chicken Tikka Boti',desc:'Chicken cubes marinated in exotic spices. BBQed and served with mint raita and tamarind chutney.',price:11.99,cat:'bbq',img:'',avail:true},
+  {id:'b11',name:'Chicken Leg Tikka',desc:'Chicken Leg marinated in exotic spices, BBQed. Served with mint yogurt and tamarind chutney.',price:8.99,cat:'bbq',img:'',avail:true},
+  {id:'b12',name:'Paneer Tikka Boti',desc:'Paneer cubes marinated in exotic spices, BBQed. Served with mint yogurt and tamarind chutney.',price:10.99,cat:'bbq',img:'',avail:true},
+  {id:'b13',name:'2 Chicken Leg Tikka — Double Treat',desc:'Two portions of Chicken Leg Tikka. Limited time offer!',price:17.99,cat:'bbq',img:'',avail:true},
+  // ROLLS
+  {id:'r1',name:'Beef Bihari Roll',desc:'Beef Bihari wrapped in a soft, warm crisp fried puri with flavorful sauces.',price:13.99,cat:'rolls',img:'',avail:true},
+  {id:'r2',name:'Beef Seekh Kabob Roll',desc:'Ground Beef BBQed and wrapped in soft, warm crisp fried puri with variety of sauces.',price:12.99,cat:'rolls',img:'',avail:true},
+  {id:'r3',name:'Chicken Bihari Roll',desc:'Chicken Bihari wrapped in soft, warm crisp fried puri with flavorful sauces.',price:12.99,cat:'rolls',img:'',avail:true},
+  {id:'r4',name:'Chicken Seekh Kabob Roll',desc:'Ground Chicken BBQed, wrapped in soft warm crisp fried puri with sauces.',price:12.99,cat:'rolls',img:'',avail:true},
+  {id:'r5',name:'Chicken Malai Boti Roll',desc:'Chicken Malai cubes BBQed, wrapped in soft warm crisp fried puri with sauces.',price:12.99,cat:'rolls',img:'',avail:true},
+  {id:'r6',name:'Chicken Tikka Boti Roll',desc:'Chicken Tikka BBQed, wrapped in soft warm crisp fried puri with sauces.',price:12.99,cat:'rolls',img:'',avail:true},
+  {id:'r7',name:'Paneer Tikka Roll',desc:'Paneer BBQed, wrapped in soft warm crisp fried puri with vegetables and sauces.',price:11.99,cat:'rolls',img:'',avail:true},
+  {id:'r8',name:'2 Kabob Rolls — Double Treat',desc:'Two kabob rolls of your choice. Limited time offer!',price:26.00,cat:'rolls',img:'',avail:true},
+  {id:'r9',name:'Aloo Tikki Bun Kabob',desc:'Spicy shallow-fried potato patty in a soft bun with onions and chutney.',price:7.99,cat:'rolls',img:'',avail:true},
+  {id:'r10',name:'Bun Kabab',desc:'Ground beef and lentil patty in a bun with chutney and raita.',price:7.99,cat:'rolls',img:'',avail:true},
+  // RICE BOWLS
+  {id:'rb1',name:'Beef Kabob Rice Bowl',desc:'Juicy BBQ Beef Kabob over fluffy steamed rice with flavorful toppings.',price:12.99,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb2',name:'Chicken Kabob Rice Bowl',desc:'BBQ Chicken Kabob over fluffy steamed rice with flavorful toppings.',price:12.99,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb3',name:'Chicken Tikka Boti Rice Bowl',desc:'Chicken Tikka over fluffy steamed rice with flavorful toppings.',price:12.99,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb4',name:'Tandoori Chicken Breast Rice Bowl',desc:'Juicy BBQ Bone-In Chicken Breast over fluffy steamed rice with toppings.',price:13.99,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb5',name:'Tandoori Chicken Leg Rice Bowl',desc:'Juicy BBQ Bone-In Chicken Leg over fluffy steamed rice with toppings.',price:13.95,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb6',name:'Butter Chicken with Rice',desc:'Classic Butter Chicken served with aromatic basmati rice.',price:14.50,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb7',name:'Chicken Tikka Masala with Rice',desc:'Rich Chicken Tikka Masala curry served with basmati rice.',price:14.50,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb8',name:'Basmati Zeera Rice',desc:'Aromatic cumin-flavored basmati rice, perfect with any curry or grilled dish.',price:4.50,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb9',name:'2 Butter Chicken — Double Treat',desc:'Two portions of Butter Chicken with Rice. Limited time offer!',price:29.99,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb10',name:'2 Chicken Biryani — Double Treat',desc:'Two portions of Chicken Biryani. Limited time offer!',price:31.99,cat:'rice_bowls',img:'',avail:true},
+  {id:'rb11',name:'2 Chicken Kabob Rice Bowl — Double Treat',desc:'Two Rice Bowls of your choice. Limited time offer!',price:28.00,cat:'rice_bowls',img:'',avail:true},
+  // KARAHI
+  {id:'k1',name:'Boneless Chicken Handi',desc:'Succulent chicken in a flavorful blend of spices and herbs, simmered in a tomato-based gravy.',price:14.99,cat:'karahi',img:'',avail:true},
+  {id:'k2',name:'Chicken Biryani',desc:'Aromatic Chicken Biryani with tender chicken and fragrant spiced rice.',price:15.95,cat:'karahi',img:'',avail:true},
+  {id:'k3',name:'Chicken Karahi — Quarter',desc:'Chicken cooked in tomato, ginger, green chilli and traditional herbs & spices.',price:14.99,cat:'karahi',img:'',avail:true},
+  {id:'k4',name:'Chicken Karahi — Half',desc:'Half Chicken cooked in tomato, ginger, green chilli and traditional herbs & spices.',price:18.99,cat:'karahi',img:'',avail:true},
+  {id:'k5',name:'Chicken Karahi — Full',desc:'Full Chicken cooked in tomato, ginger, green chilli and traditional herbs & spices.',price:29.99,cat:'karahi',img:'',avail:true},
+  {id:'k6',name:'Chicken Kabob Karahi',desc:'BBQed Chicken Kabob Karahi cooked with tomato, ginger, garlic and herbs. Served in an iron wok.',price:14.95,cat:'karahi',img:'',avail:true},
+  {id:'k7',name:'Beef Kabob Karahi',desc:'BBQed Beef Kabob Karahi cooked with tomato, ginger, garlic and herbs. Served in an iron wok.',price:15.99,cat:'karahi',img:'',avail:true},
+  {id:'k8',name:'Chicken Makhni (Half Chicken)',desc:'Tender bone-in chicken in butter, cream and tomato-based curry with aromatic spices.',price:19.95,cat:'karahi',img:'',avail:true},
+  {id:'k9',name:'Goat Karahi',desc:'Approx 1 lb of Goat meat cooked in tomato, ginger, green chilli and traditional herbs & spices.',price:23.00,cat:'karahi',img:'',avail:true},
+  {id:'k10',name:'Lamb Karahi',desc:'Approx 1 lb of Lamb meat cooked in tomato, ginger, green chilli and traditional herbs & spices.',price:23.00,cat:'karahi',img:'',avail:true},
+  {id:'k11',name:'Beef Haleem',desc:'Made of cracked wheat, lentils, beef and spices, slow cooked overnight.',price:17.99,cat:'karahi',img:'',avail:true},
+  {id:'k12',name:'Beef Nihari',desc:'Authentic Pakistani beef stew from slow-cooked lean beef simmered overnight in mixed spices.',price:15.99,cat:'karahi',img:'',avail:true},
+  {id:'k13',name:'Beef Qeema Fry (Full)',desc:'Spicy and flavorful minced beef stir-fried with aromatic spices and herbs.',price:16.99,cat:'karahi',img:'',avail:true},
+  {id:'k14',name:'Beef Qeema Fry (Small)',desc:'Spicy and flavorful minced beef stir-fried with aromatic spices and herbs.',price:8.95,cat:'karahi',img:'',avail:true},
+  {id:'k15',name:'Channa Daal Fry',desc:'Split chickpeas sautéed with onions, tomatoes and aromatic spices.',price:11.95,cat:'karahi',img:'',avail:true},
+  {id:'k16',name:'Channa Masala',desc:'Curry made with white chickpeas, onions, tomatoes, spices and herbs.',price:11.99,cat:'karahi',img:'',avail:true},
+  {id:'k17',name:'Palak Paneer',desc:'Creamy dish made with paneer in a mildly spiced fresh spinach sauce.',price:14.95,cat:'karahi',img:'',avail:true},
+  {id:'k18',name:'Paneer Tikka Masala with Rice',desc:'Marinated Paneer in a subtly spiced tomato-cream sauce. Served with rice.',price:14.50,cat:'karahi',img:'',avail:true},
+  // STREET FOOD
+  {id:'s1',name:'Aloo Samosas',desc:'Crispy fried pastry filled with spiced potatoes. Served with special chutney.',price:2.25,cat:'street',img:'',avail:true},
+  {id:'s2',name:'Beef Samosas',desc:'Crispy fried pastry filled with spiced ground beef. Served with special chutney.',price:3.60,cat:'street',img:'',avail:true},
+  {id:'s3',name:'Chicken Samosas (2 pcs)',desc:'Crispy fried pastry filled with chicken and spices. Served with special chutney.',price:3.60,cat:'street',img:'',avail:true},
+  {id:'s4',name:'Daal Kachori',desc:'Deep fried breads filled with ground dal and spices. Served with Aloo Bhaji.',price:6.99,cat:'street',img:'',avail:true},
+  {id:'s5',name:'Halwa Puri',desc:'Classic breakfast platter: puris, chole, suji halwa, aloo ki bhujia and achar pickles.',price:8.50,cat:'street',img:'',avail:true},
+  {id:'s6',name:'Karachi Chana Chat',desc:'Spicy, tangy, sweet chaat with boiled potatoes, chickpeas, onion, tomatoes, herbs and spices.',price:7.99,cat:'street',img:'',avail:true},
+  {id:'s7',name:'Samoosa Chana Chat',desc:'Crispy samosas topped with chutneys, yogurt, onions, tomatoes and chickpeas.',price:9.99,cat:'street',img:'',avail:true},
+  {id:'s8',name:'Nuggets (6 pcs)',desc:'6 crispy chicken nuggets served with fries.',price:6.99,cat:'street',img:'',avail:true},
+  {id:'s9',name:'Eggs (Omelet)',desc:'Classic egg omelet with chopped vegetables and spices.',price:6.50,cat:'street',img:'',avail:true},
+  {id:'s10',name:'Aloo Bhaji',desc:'Flavourful potato curry — vegan and gluten free.',price:9.99,cat:'street',img:'',avail:true},
+  // BURGERS
+  {id:'bu1',name:'Classic Beef Burger',desc:'Beef patty with cheese, lettuce, tomato, onion and condiments on a sliced bun.',price:10.99,cat:'burgers',img:'',avail:true},
+  {id:'bu2',name:'Crispy Chicken Burger',desc:'Hand-battered crispy chicken filet with lettuce, tomato and mayo on a brioche bun.',price:10.99,cat:'burgers',img:'',avail:true},
+  // BREADS
+  {id:'br1',name:'Plain Tandoori Naan',desc:'Classic naan prepared in a hot clay tandoor.',price:1.99,cat:'breads',img:'',avail:true},
+  {id:'br2',name:'Butter Tandoori Naan',desc:'Butter naan prepared in a hot clay tandoor.',price:2.75,cat:'breads',img:'',avail:true},
+  {id:'br3',name:'Butter Garlic Tandoori Naan',desc:'Garlic naan prepared in a hot clay tandoor.',price:3.99,cat:'breads',img:'',avail:true},
+  {id:'br4',name:'Fried Puri Paratha',desc:'Traditional fried bread — delicious and crispy, pairs with any main dish.',price:3.99,cat:'breads',img:'',avail:true},
+  {id:'br5',name:'Lachha Paratha',desc:'Layered flat bread with flaky, buttery layers — crispy exterior, soft interior.',price:3.99,cat:'breads',img:'',avail:true},
+  {id:'br6',name:'Plain Paratha',desc:'Flatbread folded for flaky layers, roasted to perfection on a hot plate.',price:3.99,cat:'breads',img:'',avail:true},
+  {id:'br7',name:'Small Puri',desc:'Traditional small fried bread — delicious and crispy.',price:2.00,cat:'breads',img:'',avail:true},
+  // SIDES
+  {id:'si1',name:'Masala Fries',desc:'Crispy fries with special masala seasoning. Served with sauce and ketchup.',price:5.49,cat:'sides',img:'',avail:true},
+  {id:'si2',name:'Regular Fries',desc:'Crispy golden fries made to order. Served with sauce and ketchup.',price:4.95,cat:'sides',img:'',avail:true},
+  {id:'si3',name:'Chicken Tenders',desc:'Hand-breaded, crispy chicken tenders with fries, made to order.',price:8.99,cat:'sides',img:'',avail:true},
+  {id:'si4',name:'Extra Aloo Bhaji',desc:'Tender potatoes infused with warm spices and fresh curry leaves.',price:2.99,cat:'sides',img:'',avail:true},
+  {id:'si5',name:'Extra Chana Bhaji',desc:'Extra portion of Chana Bhaji.',price:2.99,cat:'sides',img:'',avail:true},
+  {id:'si6',name:'Extra Puri',desc:'Extra puri fried to order.',price:1.99,cat:'sides',img:'',avail:true},
+  {id:'si7',name:'Extra Pattie',desc:'Extra burger patty prepared fresh.',price:3.50,cat:'sides',img:'',avail:true},
+  {id:'si8',name:'Extra Halwa',desc:'Suji Ka Halwa made with fine semolina, sugar and ghee.',price:2.99,cat:'sides',img:'',avail:true},
+  // DESSERTS
+  {id:'d1',name:'Gulab Jamun (3 pcs)',desc:'Fried balls of dough made from milk solids and semolina, soaked in aromatic sugar syrup.',price:5.25,cat:'desserts',img:'',avail:true},
+  {id:'d2',name:'Suji Halwa',desc:'Semolina and sugar syrup dessert flavored with cardamom, garnished with chopped almonds.',price:4.95,cat:'desserts',img:'',avail:true},
+  // DRINKS
+  {id:'dr1',name:'Mango Lassi',desc:'Blended yogurt drink with fresh mango. Refreshing and creamy.',price:5.49,cat:'drinks',img:'',avail:true},
+  {id:'dr2',name:'Sweet Lassi',desc:'Blended yogurt drink with milk. Classic and refreshing.',price:5.49,cat:'drinks',img:'',avail:true},
+  {id:'dr3',name:'Chaas',desc:'Spiced yogurt drink blended with water and traditional spices.',price:5.49,cat:'drinks',img:'',avail:true},
+  {id:'dr4',name:'Doodh Pati Chai',desc:'Traditional milk tea boiled several times — 100% milk proportion.',price:3.99,cat:'drinks',img:'',avail:true},
+  {id:'dr5',name:'Regular Tea',desc:'Classic milk tea — 70% water, 30% milk.',price:1.99,cat:'drinks',img:'',avail:true},
+  {id:'dr6',name:'Green Tea',desc:'Refreshing green tea served hot.',price:2.75,cat:'drinks',img:'',avail:true},
+  {id:'dr7',name:'Ice Tea',desc:'Chilled iced tea.',price:3.50,cat:'drinks',img:'',avail:true},
+  {id:'dr8',name:'Juice',desc:'Fresh juice of the day.',price:2.00,cat:'drinks',img:'',avail:true},
+  {id:'dr9',name:'Soda',desc:'Chilled carbonated soft drink.',price:1.99,cat:'drinks',img:'',avail:true},
+  {id:'dr10',name:'Milk',desc:'Fresh cold milk.',price:1.99,cat:'drinks',img:'',avail:true},
+  {id:'dr11',name:'Water',desc:'Still mineral water.',price:1.45,cat:'drinks',img:'',avail:true},
+];
+
+// ── DYNAMIC PRICING ENGINE ──────────────────────
+function getPrice(item) {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const day  = now.getDay();
+  let best = 0, activeDeal = null;
+
+  for (const deal of deals) {
+    if (!deal.active) continue;
+    if (deal.days && deal.days.length && !deal.days.includes(day)) continue;
+    const [sh,sm] = (deal.startTime||'00:00').split(':').map(Number);
+    const [eh,em] = (deal.endTime  ||'23:59').split(':').map(Number);
+    if (mins < sh*60+sm || mins >= eh*60+em) continue;
+    let applies = deal.applyTo === 'all';
+    if (!applies && deal.applyTo === 'category' && (deal.categories||[]).includes(item.cat||item.category)) applies = true;
+    if (!applies && deal.applyTo === 'items'    && (deal.itemIds   ||[]).includes(item.id)) applies = true;
+    if (!applies) continue;
+    const pct = deal.discountType==='percentage' ? deal.discountValue : deal.discountValue/item.price*100;
+    if (pct > best) { best = pct; activeDeal = deal; }
+  }
+
+  if (!activeDeal) return { eff: item.price, orig: item.price, deal: null };
+  const eff = activeDeal.discountType === 'percentage'
+    ? item.price * (1 - activeDeal.discountValue / 100)
+    : Math.max(0, item.price - activeDeal.discountValue);
+  return { eff: parseFloat(eff.toFixed(2)), orig: item.price, deal: activeDeal };
+}
+
+// ── NAVIGATION ─────────────────────────────────
+function goTo(id) {
+  document.querySelectorAll('.screen.active').forEach(s => s.classList.remove('active'));
+  const s = document.getElementById(id);
+  s.classList.add('active', 'fade-in');
+  setTimeout(() => s.classList.remove('fade-in'), 300);
+}
+
+async function goToMenu() {
+  goTo('sm');
+  await loadMenu();
+  buildCatBar();
+  tickTime();
+}
+function goToCart() { renderCart(); goTo('sc'); }
+function goToDetails() {
+  if (cartCount() === 0) { toast('Add items to your order first'); return; }
+  buildTableGrid();
+  setType(orderType);
+  goTo('sd');
+}
+
+// ── LOAD DATA ───────────────────────────────────
+async function loadMenu() {
+  document.getElementById('m-loader').style.display = 'block';
+  document.getElementById('m-container').innerHTML = '';
+
+  try {
+    if (db) {
+      const [ms, ds, ss] = await Promise.all([
+        db.collection('menu_items').get(),
+        db.collection('deals').get(),
+        db.collection('settings').doc('global').get()
+      ]);
+      menu   = ms.empty ? DEFAULT_MENU : ms.docs.map(d => ({...d.data(), id: d.id}));
+      deals  = ds.docs.map(d => ({...d.data(), id: d.id}));
+      if (ss.exists) settings = {...settings, ...ss.data()};
+    } else {
+      menu = DEFAULT_MENU;
+    }
+  } catch(e) {
+    console.warn('Load:', e);
+    menu = DEFAULT_MENU;
+  }
+
+  document.getElementById('m-loader').style.display = 'none';
+  renderMenu();
+}
+
+// ── RENDER MENU ─────────────────────────────────
+function buildCatBar() {
+  const used = [...new Set(menu.map(i => i.cat || i.category))];
+  const bar  = document.getElementById('cat-bar');
+  bar.innerHTML = '';
+  used.forEach((cid, idx) => {
+    const cat = CATS.find(c => c.id === cid) || {name: cid, e:'🍽'};
+    const ch  = document.createElement('button');
+    ch.className = 'cat-chip' + (idx===0?' active':'');
+    ch.innerHTML = `${cat.e} ${cat.name}`;
+    ch.onclick = () => {
+      bar.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('active'));
+      ch.classList.add('active');
+      document.getElementById(`cs-${cid}`)?.scrollIntoView({behavior:'smooth',block:'start'});
+    };
+    bar.appendChild(ch);
+  });
+}
+
+function renderMenu() {
+  const con = document.getElementById('m-container');
+  con.innerHTML = '';
+  const used = [...new Set(menu.map(i => i.cat || i.category))];
+  used.forEach(cid => {
+    const cat   = CATS.find(c=>c.id===cid)||{name:cid,e:'🍽'};
+    const items = menu.filter(i=>(i.cat||i.category)===cid);
+    const sec   = document.createElement('div');
+    sec.id      = `cs-${cid}`;
+    sec.innerHTML = `<div class="cat-label">${cat.e} ${cat.name}</div>`;
+    const col = document.createElement('div');
+    col.className = 'items-col';
+    items.forEach(item => col.appendChild(makeCard(item)));
+    sec.appendChild(col);
+    con.appendChild(sec);
+  });
+}
+
+function makeCard(item) {
+  const card = document.createElement('div');
+  const inCart = cart[item.id] && cart[item.id].qty > 0;
+  const p = getPrice(item);
+  card.className = `item-card${!item.avail && item.avail !== undefined ? ' unavail':''}${inCart?' in-cart':''}`;
+  card.id = `card-${item.id}`;
+  const priceHTML = p.deal
+    ? `<div class="item-price"><span class="op">$${p.orig.toFixed(2)}</span>$${p.eff.toFixed(2)} <span class="deal-tag">-${p.deal.discountType==='percentage'?p.deal.discountValue+'%':'$'+p.deal.discountValue}</span></div>`
+    : `<div class="item-price">$${p.eff.toFixed(2)}</div>`;
+  const photoHTML = item.img || item.imageUrl
+    ? `<div class="item-photo"><img src="${item.img||item.imageUrl}" alt="${item.name}" loading="lazy"></div>`
+    : `<div class="item-photo">${CE[item.cat||item.category]||'🍽'}</div>`;
+  const qty = inCart ? cart[item.id].qty : 0;
+  card.innerHTML = `
+    ${!item.avail && item.avail!==undefined ? '<span class="unavail-tag">Unavailable</span>' : ''}
+    ${photoHTML}
+    <div class="item-info">
+      <div class="item-name">${item.name}</div>
+      <div class="item-desc">${item.desc||item.description||''}</div>
+      <div class="item-foot">
+        ${priceHTML}
+        <div class="qty-ctrl">
+          ${qty>0?`<button class="qbtn" onclick="chQty('${item.id}',-1)">−</button><span class="qnum">${qty}</span>`:''}
+          <button class="qbtn plus" onclick="chQty('${item.id}',1)">+</button>
+        </div>
+      </div>
+    </div>`;
+  return card;
+}
+
+function refreshCard(id) {
+  const item = menu.find(i=>i.id===id);
+  if (!item) return;
+  const el = document.getElementById(`card-${id}`);
+  if (el) el.replaceWith(makeCard(item));
+}
+
+// ── CART LOGIC ──────────────────────────────────
+function chQty(id, delta) {
+  const item = menu.find(i=>i.id===id);
+  if (!item) return;
+  if (!cart[id]) cart[id] = { item, qty: 0, note: '' };
+  cart[id].qty = Math.max(0, cart[id].qty + delta);
+  if (cart[id].qty === 0) delete cart[id];
+  refreshCard(id);
+  updateCartBar();
+}
+
+function cartCount() { return Object.values(cart).reduce((s,e)=>s+e.qty,0); }
+function cartTotal()  { return Object.values(cart).reduce((s,e)=>s+getPrice(e.item).eff*e.qty,0); }
+function cartOrig()   { return Object.values(cart).reduce((s,e)=>s+e.item.price*e.qty,0); }
+
+function updateCartBar() {
+  const n = cartCount();
+  document.getElementById('cb-count').textContent = n;
+  document.getElementById('cb-total').textContent = '$'+cartTotal().toFixed(2);
+  document.getElementById('cart-bar').classList.toggle('vis', n > 0);
+}
+
+function clearCart() {
+  if (!Object.keys(cart).length) return;
+  if (!confirm('Clear all items?')) return;
+  cart = {};
+  renderMenu();
+  updateCartBar();
+  goTo('sm');
+}
+
+function renderCart() {
+  const list = document.getElementById('cart-list');
+  list.innerHTML = '';
+  const entries = Object.values(cart);
+  if (!entries.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-emoji">🛒</div><h3>Cart is empty</h3><p>Add items from the menu</p></div>`;
+    return;
+  }
+  entries.forEach(e => {
+    const p = getPrice(e.item);
+    const el = document.createElement('div');
+    el.className = 'cart-item';
+    el.innerHTML = `
+      <div class="ci-top">
+        <span class="ci-name">${e.item.name}</span>
+        <span class="ci-price">$${(p.eff*e.qty).toFixed(2)}</span>
+      </div>
+      <div class="ci-row">
+        <div class="qty-ctrl">
+          <button class="qbtn" onclick="cartChQty('${e.item.id}',-1)">−</button>
+          <span class="qnum">${e.qty}</span>
+          <button class="qbtn plus" onclick="cartChQty('${e.item.id}',1)">+</button>
+        </div>
+        <button class="add-note" onclick="toggleNote('${e.item.id}')">+ Special instructions</button>
+      </div>
+      <textarea id="note-${e.item.id}" class="note-ta" placeholder="Any special requests for this item..."
+        style="display:${e.note?'block':'none'}"
+        onchange="cart['${e.item.id}'].note=this.value">${e.note||''}</textarea>`;
+    list.appendChild(el);
+  });
+  updateCartSummary();
+}
+
+function cartChQty(id, delta) { chQty(id, delta); renderCart(); }
+function toggleNote(id) {
+  const ta = document.getElementById(`note-${id}`);
+  if (ta) { ta.style.display = ta.style.display==='none'?'block':'none'; if(ta.style.display==='block') ta.focus(); }
+}
+
+function updateCartSummary() {
+  const sub  = cartTotal();
+  const orig = cartOrig();
+  const save = parseFloat((orig - sub).toFixed(2));
+  document.getElementById('c-subtotal').textContent = '$'+sub.toFixed(2);
+  document.getElementById('c-total').textContent    = '$'+sub.toFixed(2);
+  const sr = document.getElementById('saving-row');
+  if (save > 0.005) {
+    sr.style.display = 'flex';
+    document.getElementById('c-saving').textContent = '-$'+save.toFixed(2);
+  } else { sr.style.display = 'none'; }
+  const dc = document.getElementById('deals-container');
+  dc.innerHTML = '';
+  new Set(Object.values(cart).map(e=>getPrice(e.item).deal?.name).filter(Boolean)).forEach(n => {
+    dc.innerHTML += `<div class="deal-row">🏷 ${n} applied</div>`;
+  });
+}
+
+// ── ORDER TYPE & TABLES ─────────────────────────
+function setType(t) {
+  orderType = t;
+  document.getElementById('btn-di').classList.toggle('active', t==='dine_in');
+  document.getElementById('btn-to').classList.toggle('active', t==='takeaway');
+  document.getElementById('tbl-sec').style.display = t==='dine_in' ? 'block' : 'none';
+  selTable = null;
+  document.querySelectorAll('.tbl-btn').forEach(b=>b.classList.remove('sel'));
+}
+
+function buildTableGrid() {
+  const g = document.getElementById('tbl-grid');
+  g.innerHTML = '';
+  const n = settings.tableCount || 10;
+  for (let i=1; i<=n; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'tbl-btn';
+    btn.textContent = i;
+    btn.onclick = () => {
+      g.querySelectorAll('.tbl-btn').forEach(b=>b.classList.remove('sel'));
+      btn.classList.add('sel');
+      selTable = i;
+    };
+    g.appendChild(btn);
+  }
+}
+
+// ── PLACE ORDER ─────────────────────────────────
+async function placeOrder() {
+  const name = document.getElementById('cust-name').value.trim();
+  if (!name) { toast('Please enter your name'); return; }
+  if (orderType==='dine_in' && !selTable) { toast('Please select a table'); return; }
+  if (cartCount()===0) { toast('Your cart is empty'); return; }
+
+  const items = Object.values(cart).map(e => {
+    const p = getPrice(e.item);
+    return { id: e.item.id, name: e.item.name, qty: e.qty, unitPrice: p.eff, origPrice: e.item.price, note: e.note||'', deal: p.deal?.name||null };
+  });
+
+  const order = {
+    orderNumber: Math.floor(1000 + Math.random()*9000),
+    items, orderType, customerName: name,
+    tableNumber: orderType==='dine_in' ? selTable : null,
+    status: 'pending',
+    total: cartTotal(), origTotal: cartOrig(),
+    savings: parseFloat((cartOrig()-cartTotal()).toFixed(2)),
+    timestamp: new Date()
+  };
+
+  try {
+    if (db) {
+      await db.collection('orders').add({...order, timestamp: firebase.firestore.FieldValue.serverTimestamp()});
+    }
+  } catch(e) { console.warn('Save order:', e); }
+
+  lastOrder = order;
+  document.getElementById('s-num').textContent = '#'+order.orderNumber;
+  document.getElementById('s-type').textContent = orderType==='dine_in'
+    ? `Dine In · Table ${selTable} · ${name}` : `Takeaway · ${name}`;
+  goTo('ss');
+  setTimeout(printReceipt, 900);
+}
+
+// ── PRINT RECEIPT ───────────────────────────────
+function printReceipt() {
+  if (!lastOrder) return;
+  const o = lastOrder;
+  const win = window.open('', '_blank', 'width=340,height=720');
+  if (!win) { toast('Allow popups to print'); return; }
+  const rows = o.items.map(i=>`
+    <tr>
+      <td style="padding:3px 0;vertical-align:top">${i.qty}× ${i.name}${i.note?`<br><span style="font-size:9px;color:#777">↳ ${i.note}</span>`:''}</td>
+      <td style="text-align:right;vertical-align:top;white-space:nowrap;padding-left:8px">$${(i.unitPrice*i.qty).toFixed(2)}${i.deal?`<br><span style="font-size:9px;color:#999">${i.deal}</span>`:''}</td>
+    </tr>`).join('');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+  @page{margin:4mm;size:80mm auto}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Courier New',monospace;font-size:11px;width:72mm;padding:3mm}
+  .c{text-align:center}.b{font-weight:bold}
+  hr{border:none;border-top:1px dashed #000;margin:5px 0}
+  table{width:100%;border-collapse:collapse}
+  .gt td{font-weight:bold;font-size:13px;border-top:1px solid #000;padding-top:5px}
+</style></head><body>
+<div class="c b" style="font-size:20px;letter-spacing:5px">GRISTO</div>
+<div class="c" style="font-size:8px;letter-spacing:2px;margin-bottom:2px">RESTAURANT</div>
+<hr>
+<div style="font-size:10px;line-height:1.6">
+  <div>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+  <div>Order <b>#${o.orderNumber}</b></div>
+  <div>Type: <b>${o.orderType==='dine_in'?`Dine In — Table ${o.tableNumber}`:'Takeaway'}</b></div>
+  <div>Customer: <b>${o.customerName}</b></div>
+</div>
+<hr>
+<table><tbody>${rows}</tbody></table>
+<hr>
+<table>
+  ${o.savings>0.005?`<tr><td style="font-size:10px;color:#555">You Saved</td><td style="text-align:right;font-size:10px;color:#555">-$${o.savings.toFixed(2)}</td></tr>`:''}
+  <tr class="gt"><td>TOTAL</td><td style="text-align:right">$${o.total.toFixed(2)}</td></tr>
+</table>
+<hr>
+<div class="c" style="font-size:9px;line-height:1.6;margin-top:3px">
+  Thank you for choosing GRISTO!<br>
+  selfcheckout.aolfs.com
+</div>
+</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(), 600);
+}
+
+// ── SUCCESS & RESET ─────────────────────────────
+function newOrder() {
+  cart = {}; orderType = 'dine_in'; selTable = null;
+  document.getElementById('cust-name').value = '';
+  document.getElementById('tbl-grid').querySelectorAll('.tbl-btn').forEach(b=>b.classList.remove('sel'));
+  goToMenu();
+}
+
+// ── UTILS ───────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+function tickTime() {
+  const el = document.getElementById('h-time');
+  if (el) el.textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+setInterval(tickTime, 30000);
+
+// Refresh deals every 5 min
+setInterval(async ()=>{
+  if (!db) return;
+  try {
+    const s = await db.collection('deals').get();
+    deals = s.docs.map(d=>({...d.data(),id:d.id}));
+    renderMenu();
+  } catch(e){}
+}, 5*60*1000);
+
+// PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
