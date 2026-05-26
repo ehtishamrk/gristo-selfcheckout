@@ -744,15 +744,42 @@ async function placeOrder() {
     return { id: e.item.id, name: e.item.name, qty: e.qty, unitPrice: p.eff, origPrice: e.item.price, note: e.note||'', deal: p.deal?.name||null };
   });
 
-  const order = {
-    orderNumber: Math.floor(1000 + Math.random()*9000),
-    items, orderType, customerName: name,
-    tableNumber: orderType==='dine_in' ? selTable : null,
-    status: 'pending',
-    total: cartTotal(), origTotal: cartOrig(),
-    savings: parseFloat((cartOrig()-cartTotal()).toFixed(2)),
-    timestamp: new Date()
-  };
+const order = {
+  orderNumber: Math.floor(1000 + Math.random()*9000),
+
+  items,
+  orderType,
+  customerName: name,
+
+  tableNumber:
+    orderType === 'dine_in'
+      ? selTable
+      : null,
+
+  status: 'pending',
+
+  total: cartTotal(),
+  origTotal: cartOrig(),
+
+  savings: parseFloat(
+    (cartOrig() - cartTotal()).toFixed(2)
+  ),
+
+  timestamp: new Date(),
+
+  // NEW: order edit/addition tracking
+  orderTypeMode: orderMode,
+
+  parentOrderNumber:
+    orderMode !== 'new'
+      ? lastOrder?.orderNumber
+      : null,
+
+  modificationNote:
+    orderMode !== 'new'
+      ? modificationNote
+      : ''
+};
 
   try {
     if (db) {
@@ -762,6 +789,9 @@ async function placeOrder() {
 
   lastOrder = order;
 lastOrderTime = Date.now();
+orderMode = 'new';
+modificationNote = '';
+  
   document.getElementById('s-num').textContent = '#'+order.orderNumber;
 document.getElementById('s-type').textContent = orderType==='dine_in'
     ? `Dine In · Table ${selTable} · ${name}` : `Takeaway · ${name}`;
@@ -802,7 +832,29 @@ function printReceipt() {
 <hr>
 <div style="font-size:10px;line-height:1.6">
   <div>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
-  <div>Order <b>#${o.orderNumber}</b></div>
+  <div>
+  Order <b>#${o.orderNumber}</b>
+</div>
+
+${o.orderTypeMode === 'edit' ? `
+<div style="
+  font-size:14px;
+  font-weight:bold;
+  margin-top:4px;
+">
+  ✏️ EDIT TO ORDER #${o.parentOrderNumber}
+</div>
+` : ''}
+
+${o.orderTypeMode === 'addition' ? `
+<div style="
+  font-size:14px;
+  font-weight:bold;
+  margin-top:4px;
+">
+  ➕ ADDITION TO ORDER #${o.parentOrderNumber}
+</div>
+` : ''}
 
 ${modificationNote ? `
 <div style="margin-top:4px;color:#444">
@@ -816,8 +868,44 @@ ${modificationNote ? `
 <table><tbody>${rows}</tbody></table>
 <hr>
 <table>
-  ${o.savings>0.005?`<tr><td style="font-size:10px;color:#555">You Saved</td><td style="text-align:right;font-size:10px;color:#555">-$${o.savings.toFixed(2)}</td></tr>`:''}
-  <tr class="gt"><td>TOTAL</td><td style="text-align:right">$${o.total.toFixed(2)}</td></tr>
+
+  ${o.savings > 0.005 ? `
+  <tr>
+    <td style="font-size:10px;color:#555">
+      Original Amount
+    </td>
+
+    <td style="
+      text-align:right;
+      font-size:10px;
+      color:#555
+    ">
+      $${o.origTotal.toFixed(2)}
+    </td>
+  </tr>
+
+  <tr>
+    <td style="font-size:10px;color:#555">
+      Discount
+    </td>
+
+    <td style="
+      text-align:right;
+      font-size:10px;
+      color:#555
+    ">
+      -$${o.savings.toFixed(2)}
+    </td>
+  </tr>
+  ` : ''}
+
+  <tr class="gt">
+    <td>TOTAL</td>
+    <td style="text-align:right">
+      $${o.total.toFixed(2)}
+    </td>
+  </tr>
+
 </table>
 <hr>
 <div class="c" style="font-size:9px;line-height:1.6;margin-top:3px">
