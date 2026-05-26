@@ -280,7 +280,7 @@ const firebaseConfig = {
 
 let db = null;
 try {
-  firebase.initializeApp(FB_CONFIG);
+  firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
 } catch(e) { console.warn('Firebase:', e.message); }
 
@@ -705,10 +705,10 @@ async function placeOrder() {
 
   lastOrder = order;
   document.getElementById('s-num').textContent = '#'+order.orderNumber;
-  document.getElementById('s-type').textContent = orderType==='dine_in'
+document.getElementById('s-type').textContent = orderType==='dine_in'
     ? `Dine In · Table ${selTable} · ${name}` : `Takeaway · ${name}`;
   goTo('ss');
-  setTimeout(printReceipt, 900);
+  // setTimeout(printReceipt, 900); // <-- Disabled customer printing
 }
 
 // ── PRINT RECEIPT ───────────────────────────────
