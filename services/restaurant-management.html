@@ -265,6 +265,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <p class="succ-sub">Your order has been received</p>
   <div class="order-num" id="s-num">#0000</div>
   <p class="succ-sub" id="s-type">Dine In · Table 1</p>
+  <p class="succ-sub" id="s-payment" style="margin-top:2px;font-size:13px;"></p>
 <div class="succ-acts" id="success-actions">
   <button class="btn btn-gold" onclick="viewOrder()">
     👁️&nbsp; View Order
@@ -879,6 +880,9 @@ async function placeOrder() {
   document.getElementById('s-num').textContent  = '#' + order.orderNumber;
   document.getElementById('s-type').textContent = orderType === 'dine_in'
     ? `Dine In · Table ${selTable} · ${name}` : `Takeaway · ${name}`;
+
+  document.getElementById('s-payment').textContent = 
+    (settings.cardPaymentsEnabled && payMethod === 'card') ? '💳 Paid by Card' : '💵 Pay at Counter';
 
   const canModify = canModifyOrder();
   document.getElementById('edit-order-btn').style.display  = canModify ? 'flex' : 'none';
