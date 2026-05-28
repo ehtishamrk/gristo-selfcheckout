@@ -524,33 +524,39 @@ function goToDetails() {
 }
 
 // ── LOAD DATA ───────────────────────────────────
-async function loadMenu() {
+function loadMenu() {
+  if (!db) { menu = DEFAULT_MENU; renderMenu(); return; }
+
+  let menuReady = false, dealsReady = false, settingsReady = false;
   document.getElementById('m-loader').style.display = 'block';
   document.getElementById('m-container').innerHTML = '';
 
-  try {
-    if (db) {
-      const [ms, ds, ss] = await Promise.all([
-        db.collection('menu_items').get(),
-        db.collection('deals').get(),
-        db.collection('settings').doc('global').get()
-      ]);
-      menu   = ms.empty ? DEFAULT_MENU : ms.docs.map(d => ({...d.data(), id: d.id}));
-      deals  = ds.docs.map(d => ({...d.data(), id: d.id}));
-      if (ss.exists) settings = {...settings, ...ss.data()};
-      if (settings.cardPaymentsEnabled) {
-        document.getElementById('pay-method-sec').style.display = 'block';
-      }
-    } else {
-      menu = DEFAULT_MENU;
-    }
-  } catch(e) {
-    console.warn('Load:', e);
-    menu = DEFAULT_MENU;
+  function tryRender() {
+    if (!menuReady || !dealsReady || !settingsReady) return;
+    document.getElementById('m-loader').style.display = 'none';
+    renderMenu();
   }
 
-  document.getElementById('m-loader').style.display = 'none';
-  renderMenu();
+  db.collection('menu_items').onSnapshot(snap => {
+    menu = snap.empty ? DEFAULT_MENU : snap.docs.map(d => ({...d.data(), id: d.id}));
+    menuReady = true;
+    tryRender();
+  }, e => { console.warn('menu listener:', e); menu = DEFAULT_MENU; menuReady = true; tryRender(); });
+
+  db.collection('deals').onSnapshot(snap => {
+    deals = snap.docs.map(d => ({...d.data(), id: d.id}));
+    dealsReady = true;
+    tryRender();
+  }, e => { console.warn('deals listener:', e); dealsReady = true; tryRender(); });
+
+  db.collection('settings').doc('global').onSnapshot(snap => {
+    if (snap.exists) settings = {...settings, ...snap.data()};
+    const sec = document.getElementById('pay-method-sec');
+    if (sec) sec.style.display = settings.cardPaymentsEnabled ? 'block' : 'none';
+    if (!settings.cardPaymentsEnabled && payMethod === 'card') setPayMethod('cash');
+    settingsReady = true;
+    tryRender();
+  }, e => { console.warn('settings listener:', e); settingsReady = true; tryRender(); });
 }
 
 // ── RENDER MENU ─────────────────────────────────
