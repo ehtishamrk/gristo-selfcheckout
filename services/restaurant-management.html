@@ -232,7 +232,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     </div>
     <div class="fg">
       <label class="fl">Your Name</label>
-      <input type="text" id="cust-name" class="fi" placeholder="Enter your name" autocomplete="given-name">
+      <input type="text" id="cust-name" class="fi" placeholder="Enter your name" autocomplete="given-name" maxlength="50">
     </div>
     <div id="tbl-sec">
       <div class="fg">
@@ -475,13 +475,48 @@ function getPrice(item) {
     : Math.max(0, item.price - activeDeal.discountValue);
   return { eff: parseFloat(eff.toFixed(2)), orig: item.price, deal: activeDeal };
 }
-
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 // ── NAVIGATION ─────────────────────────────────
+const IDLE_MS = 2 * 60 * 1000; // 2 minutes — adjust if needed
+let idleTimer = null;
+
+function hardReset() {
+  cart = {}; orderType = 'dine_in'; selTable = null;
+  orderMode = 'new'; modificationNote = ''; lastOrderTime = null;
+  payMethod = 'cash'; stripeInstance = null; cardElement = null;
+  document.getElementById('cust-name').value = '';
+  document.querySelectorAll('.tbl-btn').forEach(b => b.classList.remove('sel'));
+  document.getElementById('btn-cash')?.classList.add('active');
+  document.getElementById('btn-card')?.classList.remove('active');
+  document.getElementById('card-element-wrap').style.display = 'none';
+  goTo('sw');
+}
+
+function resetIdleTimer() {
+  const active = document.querySelector('.screen.active');
+  if (!active || active.id === 'sw') return;
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(hardReset, IDLE_MS);
+}
+
+['click', 'touchstart', 'keydown', 'scroll'].forEach(ev => {
+  document.addEventListener(ev, resetIdleTimer, { passive: true });
+});
+
 function goTo(id) {
   document.querySelectorAll('.screen.active').forEach(s => s.classList.remove('active'));
   const s = document.getElementById(id);
   s.classList.add('active', 'fade-in');
   setTimeout(() => s.classList.remove('fade-in'), 300);
+  clearTimeout(idleTimer);
+  if (id !== 'sw') idleTimer = setTimeout(hardReset, IDLE_MS);
 }
 
 async function goToMenu() {
@@ -701,7 +736,7 @@ function renderCart() {
       </div>
       <textarea id="note-${e.item.id}" class="note-ta" placeholder="Any special requests for this item..."
         style="display:${e.note?'block':'none'}"
-        onchange="cart['${e.item.id}'].note=this.value">${e.note||''}</textarea>`;
+        onchange="cart['${e.item.id}'].note=this.value.slice(0,150)" maxlength="150">${escapeHtml(e.note||'')}</textarea>`;
     list.appendChild(el);
   });
   updateCartSummary();
@@ -909,7 +944,7 @@ function printReceipt() {
   if (!win) { toast('Allow popups to print'); return; }
   const rows = o.items.map(i=>`
     <tr>
-      <td style="padding:3px 0;vertical-align:top">${i.qty}× ${i.name}${i.note?`<br><span style="font-size:9px;color:#777">↳ ${i.note}</span>`:''}</td>
+      <td style="padding:3px 0;vertical-align:top">${i.qty}× ${escapeHtml(i.name)}${i.note?`<br><span style="font-size:9px;color:#777">↳ ${escapeHtml(i.note)}</span>`:''}</td>
       <td style="text-align:right;vertical-align:top;white-space:nowrap;padding-left:8px">$${(i.unitPrice*i.qty).toFixed(2)}${i.deal?`<br><span style="font-size:9px;color:#999">${i.deal}</span>`:''}</td>
     </tr>`).join('');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -1016,11 +1051,13 @@ ${modificationNote ? `
 // ── SUCCESS & RESET ─────────────────────────────
 function newOrder() {
   cart = {}; orderType = 'dine_in'; selTable = null;
-  orderMode = 'new';
-modificationNote = '';
-lastOrderTime = null;
+  orderMode = 'new'; modificationNote = ''; lastOrderTime = null;
+  payMethod = 'cash'; stripeInstance = null; cardElement = null;
   document.getElementById('cust-name').value = '';
-  document.getElementById('tbl-grid').querySelectorAll('.tbl-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('tbl-grid').querySelectorAll('.tbl-btn').forEach(b => b.classList.remove('sel'));
+  document.getElementById('btn-cash')?.classList.add('active');
+  document.getElementById('btn-card')?.classList.remove('active');
+  document.getElementById('card-element-wrap').style.display = 'none';
   goToMenu();
 }
 
