@@ -876,9 +876,9 @@ function renderCart() {
         </div>
         <button class="add-note" onclick="toggleNote('${e.item.id}')">+ Special instructions</button>
       </div>
-      <textarea id="note-${e.item.id}" class="note-ta" placeholder="Any special requests for this item..."
-        style="display:${e.note?'block':'none'}"
-        data-item-id="${e.item.id}" class="note-ta cart-note"
+<textarea id="note-${e.item.id}" class="note-ta cart-note" placeholder="Any special requests for this item..."
+  style="display:${e.note?'block':'none'}"
+  data-item-id="${e.item.id}"
  maxlength="150">${escapeHtml(e.note||'')}</textarea>`;
     list.appendChild(el);
   });
@@ -1103,12 +1103,13 @@ const order = {
 
   // ── SAVE ORDER TO FIRESTORE ────────────────────
   try {
-    if (db) {
-      await db.collection('orders').add({
-  ...order,
-  timestamp: firebase.firestore.FieldValue.serverTimestamp()
-});
-    }
+if (db) {
+  const docRef = await db.collection('orders').add({
+    ...order,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  lastOrderId = docRef.id;  // ← THIS IS THE FIX
+}
   } catch(e) { console.warn('Save order:', e); }
 
   lastOrder = order;
@@ -1345,8 +1346,7 @@ async function upsertLoyaltyMember(order) {
   if (!db || !custPhone || !settings.loyaltyEnabled || !settings.loyaltyProgram) return;
   const lp     = settings.loyaltyProgram;
   const phone  = custPhone.replace(/\D/g,'');
-  const earned = Math.round((order.total||0) * (lp.pointsPerDollar||1));
-
+const earned = Math.round((order.subtotal||order.total||0) * (lp.pointsPerDollar||1));
   try {
     const ref  = db.collection('loyalty_members').doc(phone);
     const snap = await ref.get();
@@ -1486,6 +1486,7 @@ if (panel) panel.style.display = 'none';
 function newOrder() {
   cart = {}; orderType = 'dine_in'; selTable = null;
   orderMode = 'new'; modificationNote = ''; lastOrderTime = null;
+    lastOrder = null; lastOrderId = null;
   payMethod = 'cash'; stripeInstance = null; cardElement = null;
 const nameInput = document.getElementById('cust-name');
 if (nameInput) nameInput.value = '';
@@ -1518,6 +1519,7 @@ setInterval(async ()=>{
     const s = await db.collection('deals').get();
     deals = s.docs.map(d=>({...d.data(),id:d.id}));
     renderMenu();
+    updateCartBar();  // ← ADD THIS
   } catch(e){}
 }, 5*60*1000);
 
