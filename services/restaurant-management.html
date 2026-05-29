@@ -266,6 +266,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <div class="order-num" id="s-num">#0000</div>
   <p class="succ-sub" id="s-type">Dine In · Table 1</p>
   <p class="succ-sub" id="s-payment" style="margin-top:2px;font-size:13px;"></p>
+  <p id="s-wait" style="font-size:13px;color:var(--gold);margin-top:2px;"></p>
 <div class="succ-acts" id="success-actions">
   <button class="btn btn-gold" onclick="viewOrder()">
     👁️&nbsp; View Order
@@ -521,6 +522,14 @@ function goToDetails() {
   if (cartCount() === 0) { toast('Add items to your order first'); return; }
   buildTableGrid();
   setType(orderType);
+
+  // Auto-select table if customer arrived via QR code
+  const urlTable = parseInt(new URLSearchParams(window.location.search).get('table'));
+  if (urlTable > 0) {
+    const btns = document.querySelectorAll('#tbl-grid .tbl-btn');
+    if (btns[urlTable - 1]) btns[urlTable - 1].click();
+  }
+
   goTo('sd');
 }
 
@@ -883,7 +892,8 @@ async function placeOrder() {
 
   document.getElementById('s-payment').textContent = 
     (settings.cardPaymentsEnabled && payMethod === 'card') ? '💳 Paid by Card' : '💵 Pay at Counter';
-
+document.getElementById('s-wait').textContent =
+    settings.waitMinutes ? `⏱ Estimated wait: ~${settings.waitMinutes} min` : '';
   const canModify = canModifyOrder();
   document.getElementById('edit-order-btn').style.display  = canModify ? 'flex' : 'none';
   document.getElementById('add-items-btn').style.display   = canModify ? 'flex' : 'none';
