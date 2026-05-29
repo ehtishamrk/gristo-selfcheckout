@@ -734,7 +734,16 @@ function loadMenu() {
   }, e => { console.warn('deals listener:', e); dealsReady = true; tryRender(); });
 
 db.collection('settings').doc('global').onSnapshot(snap => {
-  if (snap.exists) settings = {...settings, ...snap.data()};
+  if (snap.exists) {
+    const prev = settings.categories ? JSON.stringify(settings.categories) : null;
+    settings = {...settings, ...snap.data()};
+    const curr = settings.categories ? JSON.stringify(settings.categories) : null;
+    // If categories changed and menu is already rendered, re-render live
+    if (prev !== null && prev !== curr && settingsReady) {
+      renderMenu();
+      buildCatBar();
+    }
+  }
   applySettingsToPortal(settings);
   const sec = document.getElementById('pay-method-sec');
   if (sec) sec.style.display = settings.cardPaymentsEnabled ? 'block' : 'none';
