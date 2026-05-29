@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#0A0A0A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GRISTO">
+<meta name="apple-mobile-web-app-title" id="apple-app-title" content="Nosh Stack">
 <title>Self Checkout</title>
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" id="manifest-placeholder" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <script src="https://js.stripe.com/v3/"></script>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -1260,11 +1260,31 @@ function applySettingsToPortal(s) {
   // Apply restaurant name — all instances including welcome screen
   if (s.restaurantName) {
     document.querySelectorAll('.sh-brand').forEach(el => el.textContent = s.restaurantName);
+    // Dynamically update PWA manifest name
+    const manifestData = {
+      name: s.restaurantName + ' — Self Checkout',
+      short_name: s.restaurantName,
+      description: s.restaurantName + ' Self Checkout — Order directly from your table',
+      start_url: '/services/restaurant-management.html',
+      display: 'standalone',
+      orientation: 'portrait',
+      background_color: '#0A0A0A',
+      theme_color: '#0A0A0A',
+      icons: [
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+    const manifestUrl = URL.createObjectURL(blob);
+    document.getElementById('manifest-placeholder').setAttribute('href', manifestUrl);
     const wt = document.querySelector('.wt');
     if (wt) wt.textContent = s.restaurantName;
     const logoG = document.querySelector('.logo-g');
     if (logoG) logoG.textContent = s.restaurantName.charAt(0).toUpperCase();
     document.title = s.restaurantName + ' — Self Checkout';
+    const appleMeta = document.getElementById('apple-app-title');
+    if (appleMeta) appleMeta.setAttribute('content', s.restaurantName);
   }
   if (s.tagline) {
     const ws = document.querySelector('.ws');
