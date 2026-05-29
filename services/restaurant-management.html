@@ -232,7 +232,7 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
 <div id="app">
 
 <!-- WELCOME SCREEN -->
-<div id="sw" class="screen active">
+<div id="sw" class="screen active" style="visibility:hidden;">
   <div class="wb"></div>
   <div class="wc">
     <div class="logo-ring"><span class="logo-g">G</span></div>
@@ -1533,6 +1533,21 @@ setInterval(async ()=>{
     updateCartBar();  // ← ADD THIS
   } catch(e){}
 }, 5*60*1000);
+
+// Fetch settings before revealing welcome screen — prevents any name flash
+(async function initWelcome() {
+  if (!db) { document.getElementById('sw').style.visibility = 'visible'; return; }
+  try {
+    const snap = await db.collection('settings').doc('global').get();
+    if (snap.exists) {
+      settings = { ...settings, ...snap.data() };
+      applySettingsToPortal(settings);
+    }
+  } catch(e) { console.warn('initWelcome:', e); }
+  finally {
+    document.getElementById('sw').style.visibility = 'visible';
+  }
+})();
 
 // PWA
 if ('serviceWorker' in navigator) {
