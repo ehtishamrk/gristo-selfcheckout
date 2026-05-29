@@ -737,7 +737,9 @@ function tryRender() {
 db.collection('settings').doc('global').onSnapshot(snap => {
   if (snap.exists) {
     const prev = settings.categories ? JSON.stringify(settings.categories) : null;
-    settings = {...settings, ...snap.data()};
+    const incoming = snap.data() || {};
+    if (window._nameLockedIn && incoming.restaurantName) delete incoming.restaurantName;
+    settings = {...settings, ...incoming};
     const curr = settings.categories ? JSON.stringify(settings.categories) : null;
     // If categories changed and menu is already rendered, re-render live
     if (prev !== null && prev !== curr && settingsReady) {
@@ -1563,8 +1565,9 @@ setInterval(async ()=>{
       settings = { ...settings, ...snap.data() };
       applySettingsToPortal(settings);
     }
-  } catch(e) { console.warn('initWelcome:', e); }
+} catch(e) { console.warn('initWelcome:', e); }
   finally {
+    window._nameLockedIn = true;
     document.getElementById('sw').style.visibility = 'visible';
   }
 })();
