@@ -1104,7 +1104,10 @@ const order = {
   // ── SAVE ORDER TO FIRESTORE ────────────────────
   try {
     if (db) {
-      await db.collection('orders').add({ ...order, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+      await db.collection('orders').add({
+  ...order,
+  timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
     }
   } catch(e) { console.warn('Save order:', e); }
 
@@ -1317,7 +1320,8 @@ async function submitPhone() {
 }
 
 async function finishPhoneFlow() {
-  document.getElementById('phone-modal-overlay').classList.remove('show');
+const modal = document.getElementById('phone-modal-overlay');
+if (modal) modal.classList.remove('show');
   if (db && lastOrder) {
     const lead = { phone: custPhone, name: lastOrder.customerName||'', orderNumber: lastOrder.orderNumber, orderType: lastOrder.orderType||'', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
     db.collection('phone_leads').add(lead).catch(()=>{});
@@ -1331,13 +1335,14 @@ async function finishPhoneFlow() {
 
 async function skipPhone() {
   custPhone = '';
-  document.getElementById('phone-modal-overlay').classList.remove('show');
+const modal = document.getElementById('phone-modal-overlay');
+if (modal) modal.classList.remove('show');
   await completeOrderFlow();
 }
 
 // ── LOYALTY ────────────────────────────────────
 async function upsertLoyaltyMember(order) {
-  if (!db || !custPhone || !settings.loyaltyProgram) return;
+  if (!db || !custPhone || !settings.loyaltyEnabled || !settings.loyaltyProgram) return;
   const lp     = settings.loyaltyProgram;
   const phone  = custPhone.replace(/\D/g,'');
   const earned = Math.round((order.total||0) * (lp.pointsPerDollar||1));
@@ -1391,8 +1396,11 @@ async function completeOrderFlow() {
       badge.id = 'loyalty-success-badge';
       badge.className = 'loyalty-badge';
       badge.innerHTML = `<div class="lb-pts">⭐ ${pts} pts</div><div class="lb-label">${lp.name||'Reward Points'}</div><div class="lb-total">${toGo>0?`${toGo} more points until your next reward!`:`🎁 You have a reward ready to redeem!`}</div>`;
-      const acts = document.getElementById('success-actions');
-      acts?.parentNode?.insertBefore(badge, acts);
+const acts = document.getElementById('success-actions');
+
+if (acts && acts.parentNode) {
+  acts.parentNode.insertBefore(badge, acts);
+}
     }
   }
 }
@@ -1437,8 +1445,8 @@ function applyLoyaltyRedemption() {
   const lp = settings.loyaltyProgram;
 
   redemptionApplied = true;
-  document.getElementById('loyalty-redeem-panel').style.display = 'none';
-
+const panel = document.getElementById('loyalty-redeem-panel');
+if (panel) panel.style.display = 'none';
   if (lp.rewardType === 'free_item') {
     toast(`🎁 Free item reward noted — staff will apply at counter`);
   } else {
@@ -1471,18 +1479,21 @@ function applyLoyaltyRedemption() {
 function skipRedemption() {
   redemptionApplied = false;
   redemptionAmount  = 0;
-  document.getElementById('loyalty-redeem-panel').style.display = 'none';
+const panel = document.getElementById('loyalty-redeem-panel');
+if (panel) panel.style.display = 'none';
 } 
 // ── SUCCESS & RESET ─────────────────────────────
 function newOrder() {
   cart = {}; orderType = 'dine_in'; selTable = null;
   orderMode = 'new'; modificationNote = ''; lastOrderTime = null;
   payMethod = 'cash'; stripeInstance = null; cardElement = null;
-  document.getElementById('cust-name').value = '';
+const nameInput = document.getElementById('cust-name');
+if (nameInput) nameInput.value = '';
   document.getElementById('tbl-grid').querySelectorAll('.tbl-btn').forEach(b => b.classList.remove('sel'));
   document.getElementById('btn-cash')?.classList.add('active');
   document.getElementById('btn-card')?.classList.remove('active');
-  document.getElementById('card-element-wrap').style.display = 'none';
+  const cardWrap = document.getElementById('card-element-wrap');
+if (cardWrap) cardWrap.style.display = 'none';
   goToMenu();
 }
 
