@@ -217,7 +217,15 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
 /* Safe area insets for iPhone notch/home bar */
 .d-footer, .cart-sum { padding-bottom: max(14px, env(safe-area-inset-bottom)); }
 #sw .wc { padding-bottom: max(40px, env(safe-area-inset-bottom)); }
-  
+  /* ── LOYALTY REDEEM PANEL (inside phone modal) ── */
+#loyalty-redeem-panel { display:none; background:var(--gold-d); border:1px solid rgba(200,146,42,.3); border-radius:var(--r); padding:14px 16px; margin:14px 0; }
+.lrp-title { font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:700; color:var(--gold); margin-bottom:4px; }
+.lrp-pts { font-size:12px; color:var(--tm); margin-bottom:12px; }
+.lrp-btns { display:flex; gap:8px; }
+.lrp-btns button { flex:1; padding:10px; border-radius:var(--rs); font-size:13px; font-weight:600; cursor:pointer; border:none; font-family:'DM Sans',sans-serif; transition:all .18s; }
+.lrp-redeem { background:var(--gold); color:#0A0A0A; }
+.lrp-redeem:hover { background:var(--gold-l); }
+.lrp-skip-reward { background:var(--s3); color:var(--tm); border:1px solid var(--border) !important; }
 </style>
 </head>
 <body>
@@ -389,6 +397,14 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
         <div class="pm-perk-text"><b>Exclusive offers &amp; early access</b><br><span>delivered straight to your phone</span></div>
       </div>
     </div>
+    <div id="loyalty-redeem-panel">
+  <div class="lrp-title">🎁 You have a reward ready!</div>
+  <div class="lrp-pts" id="lrp-pts-text">You have 0 points</div>
+  <div class="lrp-btns">
+    <button class="lrp-redeem" onclick="applyLoyaltyRedemption()">Apply Reward</button>
+    <button class="lrp-skip-reward" onclick="skipRedemption()">Skip This Time</button>
+  </div>
+</div>
     <div class="pm-input-row">
       <input type="tel" class="pm-input" id="phone-input" placeholder="(555) 000-0000" maxlength="20" autocomplete="tel"
         oninput="formatPhoneInput(this)" onkeydown="if(event.key==='Enter')submitPhone()">
@@ -1125,7 +1141,14 @@ function printReceipt() {
       <td style="padding:3px 0;vertical-align:top">${i.qty}× ${escapeHtml(i.name)}${i.note?`<br><span style="font-size:9px;color:#777">↳ ${escapeHtml(i.note)}</span>`:''}</td>
       <td style="text-align:right;vertical-align:top;white-space:nowrap;padding-left:8px">$${(i.unitPrice*i.qty).toFixed(2)}${i.deal?`<br><span style="font-size:9px;color:#999">${i.deal}</span>`:''}</td>
     </tr>`).join('');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+const cur      = settings.currencySymbol || '$';
+const restName = settings.restaurantName || 'Spice Korner';
+const footer   = settings.receiptFooter  || 'Thank you for dining with us!';
+const taxAmt   = (o.taxAmount     || 0).toFixed(2);
+const tipAmt   = (o.tipAmount     || 0).toFixed(2);
+const svcAmt   = (o.serviceCharge || 0).toFixed(2);
+
+win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
   @page{margin:4mm;size:80mm auto}
   *{margin:0;padding:0;box-sizing:border-box}
@@ -1135,40 +1158,14 @@ function printReceipt() {
   table{width:100%;border-collapse:collapse}
   .gt td{font-weight:bold;font-size:13px;border-top:1px solid #000;padding-top:5px}
 </style></head><body>
-<div class="c b" style="font-size:20px;letter-spacing:5px">Spice Korner</div>
+<div class="c b" style="font-size:20px;letter-spacing:5px">${restName}</div>
 <div class="c" style="font-size:8px;letter-spacing:2px;margin-bottom:2px">RESTAURANT</div>
 <hr>
 <div style="font-size:10px;line-height:1.6">
   <div>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
-  <div>
-  Order <b>#${o.orderNumber}</b>
-</div>
-
-${o.orderTypeMode === 'edit' ? `
-<div style="
-  font-size:14px;
-  font-weight:bold;
-  margin-top:4px;
-">
-  ✏️ EDIT TO ORDER #${o.parentOrderNumber}
-</div>
-` : ''}
-
-${o.orderTypeMode === 'addition' ? `
-<div style="
-  font-size:14px;
-  font-weight:bold;
-  margin-top:4px;
-">
-  ➕ ADDITION TO ORDER #${o.parentOrderNumber}
-</div>
-` : ''}
-
-${modificationNote ? `
-<div style="margin-top:4px;color:#444">
-  <b>${modificationNote}</b>
-</div>
-` : ''}
+  <div>Order <b>#${o.orderNumber}</b></div>
+  ${o.orderTypeMode==='edit'?`<div style="font-size:14px;font-weight:bold;margin-top:4px">✏️ EDIT TO ORDER #${o.parentOrderNumber}</div>`:o.orderTypeMode==='addition'?`<div style="font-size:14px;font-weight:bold;margin-top:4px">➕ ADDITION TO ORDER #${o.parentOrderNumber}</div>`:''}
+  ${modificationNote?`<div style="margin-top:4px;color:#444"><b>${modificationNote}</b></div>`:''}
   <div>Type: <b>${o.orderType==='dine_in'?`Dine In — Table ${o.tableNumber}`:'Takeaway'}</b></div>
   <div>Customer: <b>${o.customerName}</b></div>
 </div>
@@ -1176,50 +1173,15 @@ ${modificationNote ? `
 <table><tbody>${rows}</tbody></table>
 <hr>
 <table>
-
-  ${o.savings > 0.005 ? `
-  <tr>
-    <td style="font-size:10px;color:#555">
-      Original Amount
-    </td>
-
-    <td style="
-      text-align:right;
-      font-size:10px;
-      color:#555
-    ">
-      $${o.origTotal.toFixed(2)}
-    </td>
-  </tr>
-
-  <tr>
-    <td style="font-size:10px;color:#555">
-      Discount
-    </td>
-
-    <td style="
-      text-align:right;
-      font-size:10px;
-      color:#555
-    ">
-      -$${o.savings.toFixed(2)}
-    </td>
-  </tr>
-  ` : ''}
-
-  <tr class="gt">
-    <td>TOTAL</td>
-    <td style="text-align:right">
-      $${o.total.toFixed(2)}
-    </td>
-  </tr>
-
+  ${o.savings>0.005?`<tr><td style="font-size:10px;color:#555">Original</td><td style="text-align:right;font-size:10px;color:#555">${cur}${o.origTotal.toFixed(2)}</td></tr><tr><td style="font-size:10px;color:#555">Discount</td><td style="text-align:right;font-size:10px;color:#555">-${cur}${o.savings.toFixed(2)}</td></tr>`:''}
+  <tr><td style="font-size:10px;color:#555">Subtotal</td><td style="text-align:right;font-size:10px;color:#555">${cur}${(o.subtotal||o.total).toFixed(2)}</td></tr>
+  ${parseFloat(taxAmt)>0?`<tr><td style="font-size:10px;color:#555">Tax (${o.taxRate||0}%)</td><td style="text-align:right;font-size:10px;color:#555">${cur}${taxAmt}</td></tr>`:''}
+  ${parseFloat(svcAmt)>0?`<tr><td style="font-size:10px;color:#555">Service Charge</td><td style="text-align:right;font-size:10px;color:#555">${cur}${svcAmt}</td></tr>`:''}
+  ${parseFloat(tipAmt)>0?`<tr><td style="font-size:10px;color:#555">Tip</td><td style="text-align:right;font-size:10px;color:#555">${cur}${tipAmt}</td></tr>`:''}
+  <tr class="gt"><td>TOTAL</td><td style="text-align:right">${cur}${o.total.toFixed(2)}</td></tr>
 </table>
 <hr>
-<div class="c" style="font-size:9px;line-height:1.6;margin-top:3px">
-  Thank you for choosing Spice Korner!<br>
-  selfcheckout.aolfs.com
-</div>
+<div class="c" style="font-size:9px;line-height:1.6;margin-top:3px">${footer}</div>
 </body></html>`);
   win.document.close();
   win.focus();
@@ -1331,16 +1293,39 @@ function showPhoneModal() {
 
 async function submitPhone() {
   const raw = document.getElementById('phone-input').value.replace(/\D/g,'');
-  if (raw.length < 10) { document.getElementById('phone-input').style.borderColor='var(--red)'; setTimeout(()=>document.getElementById('phone-input').style.borderColor='',1500); return; }
+  if (raw.length < 10) {
+    document.getElementById('phone-input').style.borderColor = 'var(--red)';
+    setTimeout(()=>document.getElementById('phone-input').style.borderColor='', 1500);
+    return;
+  }
   custPhone = document.getElementById('phone-input').value;
+
+  // Check for redeemable loyalty points BEFORE closing modal
+  await checkLoyaltyOnPhoneSubmit(custPhone);
+
+  // If redemption panel is now visible, don't close the modal yet — wait for user choice
+  const panel = document.getElementById('loyalty-redeem-panel');
+  if (panel && panel.style.display === 'block') {
+    // Modal stays open — user must click Apply or Skip
+    // Wire both buttons to also call finishPhoneFlow() after their action
+    document.querySelector('.lrp-redeem').onclick    = async () => { applyLoyaltyRedemption(); await finishPhoneFlow(); };
+    document.querySelector('.lrp-skip-reward').onclick = async () => { skipRedemption(); await finishPhoneFlow(); };
+    return;
+  }
+
+  await finishPhoneFlow();
+}
+
+async function finishPhoneFlow() {
   document.getElementById('phone-modal-overlay').classList.remove('show');
-  // Save phone lead
   if (db && lastOrder) {
     const lead = { phone: custPhone, name: lastOrder.customerName||'', orderNumber: lastOrder.orderNumber, orderType: lastOrder.orderType||'', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
     db.collection('phone_leads').add(lead).catch(()=>{});
-    // Create or update loyalty member
     if (settings.loyaltyEnabled) await upsertLoyaltyMember(lastOrder);
   }
+  // Reset redemption state for next order
+  redemptionApplied = false;
+  redemptionAmount  = 0;
   await completeOrderFlow();
 }
 
@@ -1407,7 +1392,83 @@ async function completeOrderFlow() {
     }
   }
 }
-  
+ // ── LOYALTY REDEMPTION ──────────────────────────
+let redemptionApplied = false;
+let redemptionAmount  = 0;
+
+async function checkLoyaltyOnPhoneSubmit(phone) {
+  // Called after phone is entered — checks if member has redeemable points
+  if (!db || !settings.loyaltyEnabled || !settings.loyaltyProgram) return;
+  const lp    = settings.loyaltyProgram;
+  const clean = phone.replace(/\D/g,'');
+  try {
+    const snap = await db.collection('loyalty_members').doc(clean).get();
+    if (!snap.exists) return;
+    const member = snap.data();
+    const pts    = member.points || 0;
+    const needed = lp.rewardThreshold || 100;
+    if (pts >= needed) {
+      loyaltyMember = member;
+      // Calculate redemption value
+      if (lp.rewardType === 'percentage') {
+        redemptionAmount = parseFloat(((lastOrder?.total || 0) * lp.rewardValue / 100).toFixed(2));
+      } else if (lp.rewardType === 'discount') {
+        redemptionAmount = lp.rewardValue || 5;
+      } else {
+        redemptionAmount = 0; // free_item — handled manually by staff
+      }
+      // Show the panel
+      const panel = document.getElementById('loyalty-redeem-panel');
+      const label = document.getElementById('lrp-pts-text');
+      if (panel && label) {
+        label.textContent = `${pts} points — redeem for ${lp.rewardType === 'free_item' ? lp.rewardItemName || 'free item' : '$' + redemptionAmount.toFixed(2) + ' off'}`;
+        panel.style.display = 'block';
+      }
+    }
+  } catch(e) { console.warn('loyalty check:', e); }
+}
+
+function applyLoyaltyRedemption() {
+  if (!loyaltyMember || !settings.loyaltyProgram) return;
+  const lp = settings.loyaltyProgram;
+
+  redemptionApplied = true;
+  document.getElementById('loyalty-redeem-panel').style.display = 'none';
+
+  if (lp.rewardType === 'free_item') {
+    toast(`🎁 Free item reward noted — staff will apply at counter`);
+  } else {
+    toast(`✅ $${redemptionAmount.toFixed(2)} reward applied!`);
+    // Adjust order total in Firestore
+    if (db && lastOrderId && redemptionAmount > 0) {
+      const newTotal = Math.max(0, (lastOrder?.total || 0) - redemptionAmount);
+      db.collection('orders').doc(lastOrderId).update({
+        loyaltyDiscount: redemptionAmount,
+        total: parseFloat(newTotal.toFixed(2)),
+        loyaltyPhone: custPhone.replace(/\D/g,'')
+      }).catch(e => console.warn('loyalty update:', e));
+      if (lastOrder) lastOrder.total = newTotal;
+    }
+  }
+
+  // Deduct points from member
+  if (db && custPhone) {
+    const phone  = custPhone.replace(/\D/g,'');
+    const needed = lp.rewardThreshold || 100;
+    const cur    = loyaltyMember.points || 0;
+    db.collection('loyalty_members').doc(phone).update({
+      points:        Math.max(0, cur - needed),
+      totalRedeemed: (loyaltyMember.totalRedeemed || 0) + 1,
+      lastRedeemed:  firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(e => console.warn('points deduct:', e));
+  }
+}
+
+function skipRedemption() {
+  redemptionApplied = false;
+  redemptionAmount  = 0;
+  document.getElementById('loyalty-redeem-panel').style.display = 'none';
+} 
 // ── SUCCESS & RESET ─────────────────────────────
 function newOrder() {
   cart = {}; orderType = 'dine_in'; selTable = null;
