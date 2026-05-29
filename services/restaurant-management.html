@@ -1353,7 +1353,11 @@ async function upsertLoyaltyMember(order) {
         name:   order.customerName || cur.name || '',
         lastVisit: firebase.firestore.FieldValue.serverTimestamp()
       });
-      loyaltyMember = { ...cur, points: (cur.points||0) + earned, visits: (cur.visits||0)+1 };
+      loyaltyMember = {
+  ...cur,
+  points: (cur.points || 0) + earned,
+  visits: (cur.visits || 0) + 1
+};
     } else {
       const newMember = {
         phone, name: order.customerName||'', points: earned + (lp.welcomeBonus||0),
