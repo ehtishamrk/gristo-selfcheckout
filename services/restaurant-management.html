@@ -1786,85 +1786,100 @@ async function submitReservation() {
   const date  = document.getElementById('resv-date').value;
   const notes = document.getElementById('resv-notes').value.trim();
 
-  if (!name)                                    { toast('Please enter your name');           return; }
-  if (phone.replace(/\D/g,'').length < 10)      { toast('Please enter a valid phone number'); return; }
-  if (!date)                                    { toast('Please select a date');             return; }
-  if (!resvSelectedTime)                        { toast('Please choose a time slot');        return; }
-  if (!resvSelectedTable)                       { toast('Please select a table');            return; }
+  if (!name)                               { toast('Please enter your name');            return; }
+  if (phone.replace(/\D/g,'').length < 10) { toast('Please enter a valid phone number'); return; }
+  if (!date)                               { toast('Please select a date');              return; }
+  if (!resvSelectedTime)                   { toast('Please choose a time slot');         return; }
+  if (!resvSelectedTable)                  { toast('Please select a table');             return; }
 
-  // Build start/end timestamps
   const reservationDate = parseResvDateTime(date, resvSelectedTime);
   const durationMin     = settings.reservationDuration || 90;
   const reservationEnd  = new Date(reservationDate.getTime() + durationMin * 60000);
 
   const btn = document.querySelector('#resv-modal-overlay .btn-gold');
   btn.disabled    = true;
-  btn.textContent = 'Checking availability…';
+  btn.textContent = 'Securing your table…';
 
-  // ── CONFLICT CHECK ──────────────────────────────
-  if (db) {
-    try {
-      const conflict = await checkResvConflict(resvSelectedTable, date, reservationDate, reservationEnd);
-      if (conflict) {
-        btn.disabled    = false;
-        btn.textContent = 'Confirm Reservation →';
-        showResvConflictToast(conflict, durationMin);
-        // Highlight conflicting table
-        document.querySelectorAll('#resv-tbl-grid .tbl-btn').forEach(b => {
-          if (parseInt(b.textContent) === resvSelectedTable) {
-            b.style.background = 'var(--red)';
-            b.style.borderColor = 'var(--red)';
-            b.style.color = '#fff';
-            setTimeout(() => {
-              b.style.background = '';
-              b.style.borderColor = '';
-              b.style.color = '';
-            }, 2500);
-          }
-        });
-        return;
-      }
-    } catch(e) {
-      console.warn('conflict check failed:', e);
-      // If check fails, allow submission — don't block the customer
-    }
+  if (!db) {
+    btn.disabled    = false;
+    btn.textContent = 'Confirm Reservation →';
+    toast('Database not connected');
+    return;
   }
 
-  btn.textContent = 'Saving…';
-
-  const reservation = {
-    customerName:     name,
-    phone:            phone,
-    tableNumber:      resvSelectedTable,
-    guestCount:       resvGuestCount,
-    reservationTs:    reservationDate,
-    reservationEndTs: reservationEnd,
-    date:             date,
-    timeSlot:         resvSelectedTime,
-    durationMin:      durationMin,
-    notes:            notes,
-    status:           'pending',
-    assignedWaiter:   null,
-    assignedWaiterId: null,
-    notifiedWaiter:   false,
-    createdAt:        new Date(),
-    source:           'selfcheckout'
-  };
-
   try {
-    if (db) {
-      await db.collection('reservations').add({
-        ...reservation,
+    // ── ATOMIC TRANSACTION ───────────────────────────────────────────
+    // Read all conflicting reservations + write the new one in one atomic op.
+    // If another customer sneaks in at the exact same millisecond,
+    // Firestore aborts one of the transactions and retries — no double booking.
+    await db.runTransaction(async (tx) => {
+
+      // 1. Read existing reservations for this table + date
+      const snap = await tx.get(
+        db.collection('reservations')
+          .where('tableNumber', '==', resvSelectedTable)
+          .where('date',        '==', date)
+          .where('status',      '!=', 'cancelled')
+      );
+
+      // 2. Check for overlap
+      for (const doc of snap.docs) {
+        const r          = doc.data();
+        const existStart = r.reservationTs?.seconds
+          ? new Date(r.reservationTs.seconds * 1000)
+          : new Date(r.reservationTs);
+        const existEnd   = r.reservationEndTs?.seconds
+          ? new Date(r.reservationEndTs.seconds * 1000)
+          : new Date(existStart.getTime() + (r.durationMin || 90) * 60000);
+
+        if (reservationDate < existEnd && reservationEnd > existStart) {
+          // Conflict found — abort transaction with a typed error
+          const err    = new Error('CONFLICT');
+          err.conflict = {
+            existingName:  r.customerName,
+            existingEnd:   existEnd,
+            timeSlot:      r.timeSlot
+          };
+          throw err;
+        }
+      }
+
+      // 3. No conflict — write atomically
+      const newRef = db.collection('reservations').doc(); // auto-ID
+      tx.set(newRef, {
+        customerName:     name,
+        phone:            phone,
+        tableNumber:      resvSelectedTable,
+        guestCount:       resvGuestCount,
         reservationTs:    firebase.firestore.Timestamp.fromDate(reservationDate),
         reservationEndTs: firebase.firestore.Timestamp.fromDate(reservationEnd),
-        createdAt:        firebase.firestore.FieldValue.serverTimestamp()
+        date:             date,
+        timeSlot:         resvSelectedTime,
+        durationMin:      durationMin,
+        notes:            notes,
+        status:           'pending',
+        assignedWaiter:   null,
+        assignedWaiterId: null,
+        notifiedWaiter:   false,
+        createdAt:        firebase.firestore.Timestamp.now(),
+        source:           'selfcheckout'
       });
-    }
+    });
+    // ── TRANSACTION COMMITTED ────────────────────────────────────────
+
     closeResvModal();
     showResvSuccess(name, resvSelectedTable, resvSelectedTime, date);
+
   } catch(e) {
-    console.warn('reservation save:', e);
-    toast('Could not save reservation — try again');
+    if (e.message === 'CONFLICT') {
+      const endTime = e.conflict.existingEnd.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      toast(`Table ${resvSelectedTable} is booked until ${endTime} — pick another table or time`);
+      // Refresh table grid so the now-taken table goes grey immediately
+      buildResvTableGrid();
+    } else {
+      console.warn('reservation transaction:', e);
+      toast('Could not complete reservation — please try again');
+    }
   } finally {
     btn.disabled    = false;
     btn.textContent = 'Confirm Reservation →';
