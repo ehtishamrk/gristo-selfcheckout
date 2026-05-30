@@ -761,7 +761,7 @@ db.collection('settings').doc('global').onSnapshot(snap => {
 // ── RENDER MENU ─────────────────────────────────
 function buildCatBar() {
   const liveCats = (settings.categories && settings.categories.length) ? settings.categories : CATS;
-  const used = [...new Set(menu.map(i => i.cat || i.category))];
+  const used = [...new Set(menu.filter(i => i.avail !== false).map(i => i.cat || i.category))];
   // Sort used cats by the order defined in liveCats
   used.sort((a, b) => {
     const ai = liveCats.findIndex(c => c.id === a);
@@ -788,7 +788,7 @@ function renderMenu() {
   const liveCats = (settings.categories && settings.categories.length) ? settings.categories : CATS;
   const con = document.getElementById('m-container');
   con.innerHTML = '';
-  const used = [...new Set(menu.map(i => i.cat || i.category))];
+const used = [...new Set(menu.filter(i => i.avail !== false).map(i => i.cat || i.category))];
   // Sort sections by liveCats order
   used.sort((a, b) => {
     const ai = liveCats.findIndex(c => c.id === a);
@@ -797,7 +797,7 @@ function renderMenu() {
   });
   used.forEach(cid => {
     const cat   = liveCats.find(c=>c.id===cid)||{name:cid,e:'🍽'};
-    const items = menu.filter(i=>(i.cat||i.category)===cid);
+    const items = menu.filter(i=>(i.cat||i.category)===cid && i.avail !== false);
     const sec   = document.createElement('div');
     sec.id      = `cs-${cid}`;
     sec.innerHTML = `<div class="cat-label">${cat.e} ${cat.name}</div>`;
