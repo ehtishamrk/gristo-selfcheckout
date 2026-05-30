@@ -226,6 +226,22 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
 .lrp-redeem { background:var(--gold); color:#0A0A0A; }
 .lrp-redeem:hover { background:var(--gold-l); }
 .lrp-skip-reward { background:var(--s3); color:var(--tm); border:1px solid var(--border) !important; }
+
+  /* ── TABLE RESERVATION ── */
+#resv-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:300; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s; }
+#resv-modal-overlay.show { opacity:1; pointer-events:all; }
+.resv-sheet { background:var(--surface); border-radius:24px 24px 0 0; padding:26px 22px 40px; width:100%; max-width:480px; transform:translateY(100%); transition:transform .35s cubic-bezier(.34,1.2,.64,1); border-top:1px solid var(--border2); max-height:90vh; overflow-y:auto; }
+#resv-modal-overlay.show .resv-sheet { transform:translateY(0); }
+.resv-sheet-title { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:600; text-align:center; margin-bottom:4px; }
+.resv-sheet-sub { font-size:13px; color:var(--tm); text-align:center; margin-bottom:22px; }
+.resv-time-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:18px; }
+.resv-time-btn { padding:10px 6px; border-radius:var(--rs); border:1px solid var(--border); background:var(--surface); color:var(--tm); font-size:12.5px; font-weight:600; cursor:pointer; transition:all .18s; text-align:center; font-family:'DM Sans',sans-serif; }
+.resv-time-btn.sel { background:var(--gold); color:#0A0A0A; border-color:var(--gold); }
+.resv-time-btn:disabled { opacity:.35; cursor:not-allowed; }
+.resv-guest-ctrl { display:flex; align-items:center; gap:14px; justify-content:center; margin-bottom:18px; }
+.resv-guest-ctrl .qbtn { width:36px; height:36px; font-size:18px; }
+.resv-guest-num { font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:700; min-width:36px; text-align:center; }
+  
 </style>
 </head>
 <body>
@@ -238,8 +254,9 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
     <div class="logo-ring"><span class="logo-g">G</span></div>
     <h1 class="wt">Spice Korner</h1>
     <p class="ws">Self Checkout</p>
-<div id="sw-action">
+<div id="sw-action" style="display:flex;flex-direction:column;align-items:center;gap:12px;">
   <button class="btn btn-gold" id="start-btn" onclick="goToMenu()">Start Ordering →</button>
+  <button class="btn btn-ghost" onclick="openResvModal()" style="padding:12px 36px;font-size:13.5px;">📅 Reserve a Table</button>
 </div>
     <p class="wf">Scan • Select • Enjoy</p>
   </div>
@@ -414,6 +431,57 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
     </div>
     <button class="pm-skip" onclick="skipPhone()">No thanks, I'll skip the perks</button>
   </div>
+</div>
+  <!-- TABLE RESERVATION MODAL -->
+<div id="resv-modal-overlay">
+  <div class="resv-sheet">
+    <div class="resv-sheet-title">📅 Reserve a Table</div>
+    <p class="resv-sheet-sub">Book your spot — walk in or plan ahead</p>
+
+    <div class="fg">
+      <label class="fl">Your Name</label>
+      <input type="text" id="resv-name" class="fi" placeholder="Enter your name" maxlength="50" autocomplete="given-name">
+    </div>
+    <div class="fg">
+      <label class="fl">Phone Number</label>
+      <input type="tel" id="resv-phone" class="fi" placeholder="(555) 000-0000" maxlength="20" autocomplete="tel" oninput="formatPhoneInput(this)">
+    </div>
+    <div class="fg">
+      <label class="fl">Date</label>
+      <input type="date" id="resv-date" class="fi">
+    </div>
+    <div class="fg">
+      <label class="fl">Time Slot</label>
+      <div class="resv-time-grid" id="resv-time-grid"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Number of Guests</label>
+      <div class="resv-guest-ctrl">
+        <button class="qbtn" onclick="changeGuests(-1)">−</button>
+        <span class="resv-guest-num" id="resv-guest-count">2</span>
+        <button class="qbtn plus" onclick="changeGuests(1)">+</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Select Table</label>
+      <div class="tbl-grid" id="resv-tbl-grid"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Notes (optional)</label>
+      <textarea id="resv-notes" class="note-ta" style="height:64px;display:block;" placeholder="Allergies, special occasions, seating preference…" maxlength="200"></textarea>
+    </div>
+
+    <button class="btn btn-gold btn-full" onclick="submitReservation()" style="margin-bottom:12px;">Confirm Reservation →</button>
+    <button class="pm-skip" onclick="closeResvModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- RESERVATION SUCCESS OVERLAY -->
+<div id="resv-success-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:30px;">
+  <div class="succ-icon" style="margin-bottom:16px;">📅</div>
+  <h2 class="succ-title">Reservation Requested!</h2>
+  <p class="succ-sub" style="margin-top:8px;" id="resv-confirm-text"></p>
+  <button class="btn btn-gold" style="margin-top:28px;" onclick="closeResvSuccess()">Done</button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1552,6 +1620,158 @@ if (cardWrap) cardWrap.style.display = 'none';
   goToMenu();
 }
 
+// ══════════════════════════════════════════
+// ★ TABLE RESERVATION
+// ══════════════════════════════════════════
+
+let resvGuestCount = 2;
+let resvSelectedTable = null;
+let resvSelectedTime = null;
+
+const RESV_TIME_SLOTS = [
+  '11:00 AM','11:30 AM','12:00 PM','12:30 PM',
+  '1:00 PM','1:30 PM','2:00 PM','2:30 PM',
+  '3:00 PM','3:30 PM','5:00 PM','5:30 PM',
+  '6:00 PM','6:30 PM','7:00 PM','7:30 PM',
+  '8:00 PM','8:30 PM','9:00 PM'
+];
+
+function openResvModal() {
+  resvGuestCount = 2;
+  resvSelectedTable = null;
+  resvSelectedTime = null;
+
+  document.getElementById('resv-name').value = '';
+  document.getElementById('resv-phone').value = '';
+  document.getElementById('resv-notes').value = '';
+  document.getElementById('resv-guest-count').textContent = '2';
+
+  // Default date = today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('resv-date').value = today;
+  document.getElementById('resv-date').min = today;
+
+  buildResvTimeGrid();
+  buildResvTableGrid();
+
+  document.getElementById('resv-modal-overlay').classList.add('show');
+}
+
+function closeResvModal() {
+  document.getElementById('resv-modal-overlay').classList.remove('show');
+}
+
+function buildResvTimeGrid() {
+  const grid = document.getElementById('resv-time-grid');
+  grid.innerHTML = '';
+  RESV_TIME_SLOTS.forEach(slot => {
+    const btn = document.createElement('button');
+    btn.className = 'resv-time-btn';
+    btn.textContent = slot;
+    btn.onclick = () => {
+      resvSelectedTime = slot;
+      grid.querySelectorAll('.resv-time-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function buildResvTableGrid() {
+  const grid = document.getElementById('resv-tbl-grid');
+  grid.innerHTML = '';
+  const n = settings.tableCount || 10;
+  for (let i = 1; i <= n; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'tbl-btn';
+    btn.textContent = i;
+    btn.onclick = () => {
+      resvSelectedTable = i;
+      grid.querySelectorAll('.tbl-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+    };
+    grid.appendChild(btn);
+  }
+}
+
+function changeGuests(delta) {
+  resvGuestCount = Math.max(1, Math.min(20, resvGuestCount + delta));
+  document.getElementById('resv-guest-count').textContent = resvGuestCount;
+}
+
+async function submitReservation() {
+  const name  = document.getElementById('resv-name').value.trim();
+  const phone = document.getElementById('resv-phone').value.trim();
+  const date  = document.getElementById('resv-date').value;
+  const notes = document.getElementById('resv-notes').value.trim();
+
+  if (!name)              { toast('Please enter your name');          return; }
+  if (phone.replace(/\D/g,'').length < 10) { toast('Please enter a valid phone number'); return; }
+  if (!date)              { toast('Please select a date');            return; }
+  if (!resvSelectedTime)  { toast('Please choose a time slot');       return; }
+  if (!resvSelectedTable) { toast('Please select a table');           return; }
+
+  // Build reservation timestamp
+  const [timePart, ampm] = resvSelectedTime.split(' ');
+  let [h, m] = timePart.split(':').map(Number);
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  const reservationDate = new Date(`${date}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`);
+
+  const reservation = {
+    customerName: name,
+    phone:        phone,
+    tableNumber:  resvSelectedTable,
+    guestCount:   resvGuestCount,
+    reservationTs: reservationDate,
+    date:         date,
+    timeSlot:     resvSelectedTime,
+    notes:        notes,
+    status:       'pending',
+    // Waiter integration — set assignedWaiter when waiter app is live
+    assignedWaiter:   null,
+    assignedWaiterId: null,
+    notifiedWaiter:   false,
+    createdAt:    new Date(),
+    source:       'selfcheckout'
+  };
+
+  const btn = document.querySelector('#resv-modal-overlay .btn-gold');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    if (db) {
+      await db.collection('reservations').add({
+        ...reservation,
+        reservationTs: firebase.firestore.Timestamp.fromDate(reservationDate),
+        createdAt:     firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    closeResvModal();
+    showResvSuccess(name, resvSelectedTable, resvSelectedTime, date);
+  } catch(e) {
+    console.warn('reservation save:', e);
+    toast('Could not save reservation — try again');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Confirm Reservation →';
+  }
+}
+
+function showResvSuccess(name, table, time, date) {
+  const d = new Date(date + 'T12:00:00');
+  const dateLabel = d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  document.getElementById('resv-confirm-text').innerHTML =
+    `<b>${name}</b>, you're booked!<br><br>📅 ${dateLabel}<br>⏰ ${time} &nbsp;·&nbsp; 🪑 Table ${table}<br>👥 ${resvGuestCount} guest${resvGuestCount !== 1 ? 's' : ''}<br><br><span style="font-size:12px;color:var(--tm)">We'll have your table ready. See you soon!</span>`;
+  const overlay = document.getElementById('resv-success-overlay');
+  overlay.style.display = 'flex';
+}
+
+function closeResvSuccess() {
+  document.getElementById('resv-success-overlay').style.display = 'none';
+}
+  
 // ── UTILS ───────────────────────────────────────
 function toast(msg) {
   const t = document.getElementById('toast');
