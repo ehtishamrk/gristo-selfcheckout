@@ -1808,78 +1808,56 @@ async function submitReservation() {
   }
 
   try {
-    // ── ATOMIC TRANSACTION ───────────────────────────────────────────
-    // Read all conflicting reservations + write the new one in one atomic op.
-    // If another customer sneaks in at the exact same millisecond,
-    // Firestore aborts one of the transactions and retries — no double booking.
-    await db.runTransaction(async (tx) => {
+    // ── STEP 1: Query conflicts (outside transaction — compat SDK limitation) ──
+    const snap = await db.collection('reservations')
+      .where('tableNumber', '==', resvSelectedTable)
+      .where('date',        '==', date)
+      .where('status',      '!=', 'cancelled')
+      .get();
 
-      // 1. Read existing reservations for this table + date
-      const snap = await tx.get(
-        db.collection('reservations')
-          .where('tableNumber', '==', resvSelectedTable)
-          .where('date',        '==', date)
-          .where('status',      '!=', 'cancelled')
-      );
+    for (const doc of snap.docs) {
+      const r          = doc.data();
+      const existStart = r.reservationTs?.seconds
+        ? new Date(r.reservationTs.seconds * 1000)
+        : new Date(r.reservationTs);
+      const existEnd   = r.reservationEndTs?.seconds
+        ? new Date(r.reservationEndTs.seconds * 1000)
+        : new Date(existStart.getTime() + (r.durationMin || 90) * 60000);
 
-      // 2. Check for overlap
-      for (const doc of snap.docs) {
-        const r          = doc.data();
-        const existStart = r.reservationTs?.seconds
-          ? new Date(r.reservationTs.seconds * 1000)
-          : new Date(r.reservationTs);
-        const existEnd   = r.reservationEndTs?.seconds
-          ? new Date(r.reservationEndTs.seconds * 1000)
-          : new Date(existStart.getTime() + (r.durationMin || 90) * 60000);
-
-        if (reservationDate < existEnd && reservationEnd > existStart) {
-          // Conflict found — abort transaction with a typed error
-          const err    = new Error('CONFLICT');
-          err.conflict = {
-            existingName:  r.customerName,
-            existingEnd:   existEnd,
-            timeSlot:      r.timeSlot
-          };
-          throw err;
-        }
+      if (reservationDate < existEnd && reservationEnd > existStart) {
+        const endTime = existEnd.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+        toast(`Table ${resvSelectedTable} is booked until ${endTime} — pick another table or time`);
+        buildResvTableGrid();
+        return;
       }
+    }
 
-      // 3. No conflict — write atomically
-      const newRef = db.collection('reservations').doc(); // auto-ID
-      tx.set(newRef, {
-        customerName:     name,
-        phone:            phone,
-        tableNumber:      resvSelectedTable,
-        guestCount:       resvGuestCount,
-        reservationTs:    firebase.firestore.Timestamp.fromDate(reservationDate),
-        reservationEndTs: firebase.firestore.Timestamp.fromDate(reservationEnd),
-        date:             date,
-        timeSlot:         resvSelectedTime,
-        durationMin:      durationMin,
-        notes:            notes,
-        status:           'pending',
-        assignedWaiter:   null,
-        assignedWaiterId: null,
-        notifiedWaiter:   false,
-        createdAt:        firebase.firestore.Timestamp.now(),
-        source:           'selfcheckout'
-      });
+    // ── STEP 2: No conflict — write the reservation ──────────────────
+    await db.collection('reservations').add({
+      customerName:     name,
+      phone:            phone,
+      tableNumber:      resvSelectedTable,
+      guestCount:       resvGuestCount,
+      reservationTs:    firebase.firestore.Timestamp.fromDate(reservationDate),
+      reservationEndTs: firebase.firestore.Timestamp.fromDate(reservationEnd),
+      date:             date,
+      timeSlot:         resvSelectedTime,
+      durationMin:      durationMin,
+      notes:            notes,
+      status:           'pending',
+      assignedWaiter:   null,
+      assignedWaiterId: null,
+      notifiedWaiter:   false,
+      createdAt:        firebase.firestore.FieldValue.serverTimestamp(),
+      source:           'selfcheckout'
     });
-    // ── TRANSACTION COMMITTED ────────────────────────────────────────
 
     closeResvModal();
     showResvSuccess(name, resvSelectedTable, resvSelectedTime, date);
 
   } catch(e) {
-    if (e.message === 'CONFLICT') {
-      const endTime = e.conflict.existingEnd.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-      toast(`Table ${resvSelectedTable} is booked until ${endTime} — pick another table or time`);
-      // Refresh table grid so the now-taken table goes grey immediately
-      buildResvTableGrid();
-    } else {
-      console.warn('reservation transaction:', e);
-      toast('Could not complete reservation — please try again');
-    }
+    console.warn('reservation save:', e);
+    toast('Could not complete reservation — please try again');
   } finally {
     btn.disabled    = false;
     btn.textContent = 'Confirm Reservation →';
