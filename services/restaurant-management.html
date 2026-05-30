@@ -1700,12 +1700,13 @@ function buildResvTimeGrid() {
     btn.textContent = label;
     btn.disabled = isPast;
     if (isPast) btn.style.opacity = '0.3';
-    btn.onclick = () => {
-      if (isPast) return;
-      resvSelectedTime = label;
-      grid.querySelectorAll('.resv-time-btn').forEach(b => b.classList.remove('sel'));
-      btn.classList.add('sel');
-    };
+btn.onclick = () => {
+  if (isPast) return;
+  resvSelectedTime = label;
+  grid.querySelectorAll('.resv-time-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  buildResvTableGrid();
+};
     grid.appendChild(btn);
     hasAny = true;
   }
@@ -1715,15 +1716,57 @@ function buildResvTimeGrid() {
   }
 }
 
-function buildResvTableGrid() {
+async function buildResvTableGrid() {
   const grid = document.getElementById('resv-tbl-grid');
   grid.innerHTML = '';
   const n = settings.tableCount || 10;
+
+  // Reset selection
+  resvSelectedTable = null;
+
+  // If we have a time selected and date, pre-check conflicts for all tables
+  let blockedTables = new Set();
+  if (db && resvSelectedTime && document.getElementById('resv-date').value) {
+    try {
+      const date = document.getElementById('resv-date').value;
+      const start = parseResvDateTime(date, resvSelectedTime);
+      const durationMin = settings.reservationDuration || 90;
+      const end = new Date(start.getTime() + durationMin * 60000);
+
+      const snap = await db.collection('reservations')
+        .where('date', '==', date)
+        .where('status', '!=', 'cancelled')
+        .get();
+
+      snap.docs.forEach(doc => {
+        const r = doc.data();
+        const existStart = r.reservationTs?.seconds
+          ? new Date(r.reservationTs.seconds * 1000)
+          : new Date(r.reservationTs);
+        const existEnd = r.reservationEndTs?.seconds
+          ? new Date(r.reservationEndTs.seconds * 1000)
+          : new Date(existStart.getTime() + (r.durationMin || 90) * 60000);
+
+        if (start < existEnd && end > existStart) {
+          blockedTables.add(r.tableNumber);
+        }
+      });
+    } catch(e) { console.warn('table availability check:', e); }
+  }
+
   for (let i = 1; i <= n; i++) {
+    const isBlocked = blockedTables.has(i);
     const btn = document.createElement('button');
-    btn.className = 'tbl-btn';
+    btn.className = 'tbl-btn' + (isBlocked ? ' unavail' : '');
     btn.textContent = i;
+    btn.disabled = isBlocked;
+    if (isBlocked) {
+      btn.title = 'Table not available at this time';
+      btn.style.opacity = '0.3';
+      btn.style.cursor = 'not-allowed';
+    }
     btn.onclick = () => {
+      if (isBlocked) return;
       resvSelectedTable = i;
       grid.querySelectorAll('.tbl-btn').forEach(b => b.classList.remove('sel'));
       btn.classList.add('sel');
@@ -1743,47 +1786,78 @@ async function submitReservation() {
   const date  = document.getElementById('resv-date').value;
   const notes = document.getElementById('resv-notes').value.trim();
 
-  if (!name)              { toast('Please enter your name');          return; }
-  if (phone.replace(/\D/g,'').length < 10) { toast('Please enter a valid phone number'); return; }
-  if (!date)              { toast('Please select a date');            return; }
-  if (!resvSelectedTime)  { toast('Please choose a time slot');       return; }
-  if (!resvSelectedTable) { toast('Please select a table');           return; }
+  if (!name)                                    { toast('Please enter your name');           return; }
+  if (phone.replace(/\D/g,'').length < 10)      { toast('Please enter a valid phone number'); return; }
+  if (!date)                                    { toast('Please select a date');             return; }
+  if (!resvSelectedTime)                        { toast('Please choose a time slot');        return; }
+  if (!resvSelectedTable)                       { toast('Please select a table');            return; }
 
-  // Build reservation timestamp
-  const [timePart, ampm] = resvSelectedTime.split(' ');
-  let [h, m] = timePart.split(':').map(Number);
-  if (ampm === 'PM' && h !== 12) h += 12;
-  if (ampm === 'AM' && h === 12) h = 0;
-  const reservationDate = new Date(`${date}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`);
+  // Build start/end timestamps
+  const reservationDate = parseResvDateTime(date, resvSelectedTime);
+  const durationMin     = settings.reservationDuration || 90;
+  const reservationEnd  = new Date(reservationDate.getTime() + durationMin * 60000);
+
+  const btn = document.querySelector('#resv-modal-overlay .btn-gold');
+  btn.disabled    = true;
+  btn.textContent = 'Checking availability…';
+
+  // ── CONFLICT CHECK ──────────────────────────────
+  if (db) {
+    try {
+      const conflict = await checkResvConflict(resvSelectedTable, date, reservationDate, reservationEnd);
+      if (conflict) {
+        btn.disabled    = false;
+        btn.textContent = 'Confirm Reservation →';
+        showResvConflictToast(conflict, durationMin);
+        // Highlight conflicting table
+        document.querySelectorAll('#resv-tbl-grid .tbl-btn').forEach(b => {
+          if (parseInt(b.textContent) === resvSelectedTable) {
+            b.style.background = 'var(--red)';
+            b.style.borderColor = 'var(--red)';
+            b.style.color = '#fff';
+            setTimeout(() => {
+              b.style.background = '';
+              b.style.borderColor = '';
+              b.style.color = '';
+            }, 2500);
+          }
+        });
+        return;
+      }
+    } catch(e) {
+      console.warn('conflict check failed:', e);
+      // If check fails, allow submission — don't block the customer
+    }
+  }
+
+  btn.textContent = 'Saving…';
 
   const reservation = {
-    customerName: name,
-    phone:        phone,
-    tableNumber:  resvSelectedTable,
-    guestCount:   resvGuestCount,
-    reservationTs: reservationDate,
-    date:         date,
-    timeSlot:     resvSelectedTime,
-    notes:        notes,
-    status:       'pending',
-    // Waiter integration — set assignedWaiter when waiter app is live
+    customerName:     name,
+    phone:            phone,
+    tableNumber:      resvSelectedTable,
+    guestCount:       resvGuestCount,
+    reservationTs:    reservationDate,
+    reservationEndTs: reservationEnd,
+    date:             date,
+    timeSlot:         resvSelectedTime,
+    durationMin:      durationMin,
+    notes:            notes,
+    status:           'pending',
     assignedWaiter:   null,
     assignedWaiterId: null,
     notifiedWaiter:   false,
-    createdAt:    new Date(),
-    source:       'selfcheckout'
+    createdAt:        new Date(),
+    source:           'selfcheckout'
   };
-
-  const btn = document.querySelector('#resv-modal-overlay .btn-gold');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
 
   try {
     if (db) {
       await db.collection('reservations').add({
         ...reservation,
-        reservationTs: firebase.firestore.Timestamp.fromDate(reservationDate),
-        createdAt:     firebase.firestore.FieldValue.serverTimestamp()
+        reservationTs:    firebase.firestore.Timestamp.fromDate(reservationDate),
+        reservationEndTs: firebase.firestore.Timestamp.fromDate(reservationEnd),
+        createdAt:        firebase.firestore.FieldValue.serverTimestamp()
       });
     }
     closeResvModal();
@@ -1792,11 +1866,55 @@ async function submitReservation() {
     console.warn('reservation save:', e);
     toast('Could not save reservation — try again');
   } finally {
-    btn.disabled = false;
+    btn.disabled    = false;
     btn.textContent = 'Confirm Reservation →';
   }
 }
 
+function parseResvDateTime(dateStr, timeSlot) {
+  // timeSlot format: "3:00 PM"
+  const [timePart, ampm] = timeSlot.split(' ');
+  let [h, m] = timePart.split(':').map(Number);
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return new Date(`${dateStr}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`);
+}
+
+async function checkResvConflict(tableNumber, date, newStart, newEnd) {
+  // Query reservations on the same table and same date, not cancelled
+  const snap = await db.collection('reservations')
+    .where('tableNumber', '==', tableNumber)
+    .where('date', '==', date)
+    .where('status', '!=', 'cancelled')
+    .get();
+
+  for (const doc of snap.docs) {
+    const r = doc.data();
+    const existStart = r.reservationTs?.seconds
+      ? new Date(r.reservationTs.seconds * 1000)
+      : new Date(r.reservationTs);
+    const existEnd = r.reservationEndTs?.seconds
+      ? new Date(r.reservationEndTs.seconds * 1000)
+      : new Date(existStart.getTime() + (r.durationMin || 90) * 60000);
+
+    // Overlap check: newStart < existEnd AND newEnd > existStart
+    if (newStart < existEnd && newEnd > existStart) {
+      return {
+        existingName:  r.customerName,
+        existingStart: existStart,
+        existingEnd:   existEnd,
+        timeSlot:      r.timeSlot
+      };
+    }
+  }
+  return null; // no conflict
+}
+
+function showResvConflictToast(conflict, durationMin) {
+  const endTime = conflict.existingEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  toast(`Table taken until ${endTime} — pick another table or time`);
+}
+  
 function showResvSuccess(name, table, time, date) {
   const d = new Date(date + 'T12:00:00');
   const dateLabel = d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
