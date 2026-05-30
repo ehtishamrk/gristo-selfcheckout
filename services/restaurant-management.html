@@ -141,7 +141,27 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 /* SUCCESS */
 #ss{background:var(--bg);align-items:center;justify-content:center;text-align:center;padding:40px 28px;}
 .succ-icon{width:88px;height:88px;border-radius:50%;background:rgba(74,155,111,.14);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 22px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1);}
-@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+/* ── ORDER STATUS TRACKER ── */
+.track-wrap{display:flex;flex-direction:column;align-items:center;padding:32px 24px;gap:0;}
+.track-order-num{font-size:13px;color:var(--tm);letter-spacing:1px;margin-bottom:4px;}
+.track-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:28px;text-align:center;}
+.track-steps{display:flex;flex-direction:column;gap:0;width:100%;max-width:320px;}
+.track-step{display:flex;align-items:flex-start;gap:14px;position:relative;padding-bottom:28px;}
+.track-step:last-child{padding-bottom:0;}
+.track-step::after{content:'';position:absolute;left:17px;top:36px;width:2px;bottom:0;background:var(--bd);transition:background .4s;}
+.track-step.done::after{background:var(--gold);}
+.track-step:last-child::after{display:none;}
+.track-dot{width:36px;height:36px;border-radius:50%;border:2px solid var(--bd);background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .4s;}
+.track-step.done .track-dot{border-color:var(--gold);background:var(--gold);color:#000;}
+.track-step.active .track-dot{border-color:var(--gold);background:transparent;box-shadow:0 0 0 4px var(--gold-d);animation:pulse-dot 1.5s infinite;}
+.track-info{padding-top:6px;}
+.track-step-name{font-size:14px;font-weight:600;color:var(--tm);transition:color .4s;}
+.track-step.done .track-step-name,.track-step.active .track-step-name{color:var(--text);}
+.track-step-desc{font-size:12px;color:var(--td);margin-top:2px;}
+.track-ready-msg{margin-top:28px;padding:14px 20px;background:var(--gold-d);border:1px solid var(--gold);border-radius:var(--r);text-align:center;font-size:14px;font-weight:600;color:var(--gold);display:none;}
+.track-ready-msg.show{display:block;}
+@keyframes pulse-dot{0%,100%{box-shadow:0 0 0 4px var(--gold-d);}50%{box-shadow:0 0 0 8px transparent;}}
+  @keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 .succ-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;margin-bottom:6px;}
 .succ-sub{font-size:13px;color:var(--tm);}
 .order-num{font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700;color:var(--gold);margin:18px 0;}
@@ -361,6 +381,38 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
   <h2 class="paused-title">Kitchen Closed</h2>
   <p class="paused-msg" id="paused-msg-text">We're not taking orders right now. Please see a member of staff.</p>
 </div>
+
+<div id="s-track" class="screen">
+  <div class="track-wrap">
+    <div class="track-order-num" id="track-order-num"></div>
+    <div class="track-title">Your Order Status</div>
+    <div class="track-steps">
+      <div class="track-step" id="ts-received">
+        <div class="track-dot">📋</div>
+        <div class="track-info">
+          <div class="track-step-name">Order Received</div>
+          <div class="track-step-desc">Kitchen has your order</div>
+        </div>
+      </div>
+      <div class="track-step" id="ts-preparing">
+        <div class="track-dot">👨‍🍳</div>
+        <div class="track-info">
+          <div class="track-step-name">Preparing</div>
+          <div class="track-step-desc">Your food is being made</div>
+        </div>
+      </div>
+      <div class="track-step" id="ts-ready">
+        <div class="track-dot">✓</div>
+        <div class="track-info">
+          <div class="track-step-name">Ready</div>
+          <div class="track-step-desc">Your order is ready!</div>
+        </div>
+      </div>
+    </div>
+    <div class="track-ready-msg" id="track-ready-msg">🎉 Your order is ready — enjoy!</div>
+    <button class="btn btn-ghost" style="margin-top:28px;width:100%;max-width:320px;" onclick="goTo('ss')">← Back to Order</button>
+  </div>
+</div>
   
 <!-- SUCCESS SCREEN -->
 <div id="ss" class="screen">
@@ -372,8 +424,17 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
   <p class="succ-sub" id="s-payment" style="margin-top:2px;font-size:13px;"></p>
   <p id="s-wait" style="font-size:13px;color:var(--gold);margin-top:2px;"></p>
 <div class="succ-acts" id="success-actions">
-  <button class="btn btn-gold" onclick="viewOrder()">
+  
+  
+  
+<button class="btn btn-gold" onclick="viewOrder()">
     👁️&nbsp; View Order
+  </button>
+  <button class="btn btn-ghost" id="track-order-btn" onclick="goToTracker()" style="display:none;">
+    📍&nbsp; Track Order
+  </button>
+  <button class="btn btn-ghost" id="reorder-btn" onclick="reorder()" style="display:none;">
+    🔁&nbsp; Reorder Same
   </button>
 
   <button class="btn btn-ghost" id="edit-order-btn"
@@ -514,6 +575,14 @@ let tipAmount  = 0;      // calculated tip $
 let tipPct     = 18;     // selected tip %
 let custPhone  = '';     // customer's phone (captured at end)
 let loyaltyMember = null; // loaded loyalty record
+  // ── SESSION IDENTITY ─────────────────────────────
+const SESSION_KEY = 'hx_session_id';
+function getSessionId() {
+  let id = sessionStorage.getItem(SESSION_KEY);
+  if (!id) { id = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); sessionStorage.setItem(SESSION_KEY, id); }
+  return id;
+}
+const sessionId = getSessionId();
 let cart = {}, orderType = 'dine_in', selTable = null, lastOrder = null;
 let payMethod = 'cash'; // 'cash' or 'card'
 let stripeInstance = null, cardElement = null;
@@ -684,6 +753,7 @@ const IDLE_MS = 2 * 60 * 1000; // 2 minutes — adjust if needed
 let idleTimer = null;
 
 function hardReset() {
+  if (_trackerUnsub) { _trackerUnsub(); _trackerUnsub = null; }
   cart = {}; orderType = 'dine_in'; selTable = null;
   orderMode = 'new'; modificationNote = ''; lastOrderTime = null;
   lastOrder = null; lastOrderId = null; tipAmount = 0; custPhone = '';
@@ -1141,8 +1211,9 @@ const order = {
   parentOrderNumber: orderMode !== 'new' ? lastOrder?.orderNumber : null,
   modificationNote:  orderMode !== 'new' ? modificationNote : '',
   paymentMethod:     settings.cardPaymentsEnabled ? payMethod : 'cash',
-  paymentStatus:     'unpaid',
+paymentStatus:     'unpaid',
   currency:          settings.currencyCode || 'USD',
+  sessionId:         sessionId,
 };
 
   // ── CARD PAYMENT FLOW ──────────────────────────
@@ -1224,11 +1295,62 @@ document.getElementById('s-wait').textContent =
   document.getElementById('edit-order-btn').style.display  = canModify ? 'flex' : 'none';
   document.getElementById('add-items-btn').style.display   = canModify ? 'flex' : 'none';
 
+document.getElementById('track-order-btn').style.display = 'flex';
+  document.getElementById('reorder-btn').style.display = lastOrder ? 'flex' : 'none';
   goTo('ss');
-  // Show phone capture modal after a short delay so success screen is visible first
+  startOrderTracker(lastOrderId);
   setTimeout(() => showPhoneModal(), 1200);
 }
 
+// ── ORDER TRACKER ────────────────────────────────
+let _trackerUnsub = null;
+
+function startOrderTracker(orderId) {
+  if (_trackerUnsub) { _trackerUnsub(); _trackerUnsub = null; }
+  if (!db || !orderId) return;
+  document.getElementById('track-order-num').textContent = lastOrder ? '#' + lastOrder.orderNumber : '';
+  _trackerUnsub = db.collection('orders').doc(orderId).onSnapshot(snap => {
+    if (!snap.exists) return;
+    const status = snap.data().status;
+    _updateTrackerUI(status);
+  });
+}
+
+function _updateTrackerUI(status) {
+  const steps = { received: 0, pending: 0, preparing: 1, ready: 2, completed: 2 };
+  const idx   = steps[status] ?? 0;
+  const ids   = ['ts-received', 'ts-preparing', 'ts-ready'];
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('done', 'active');
+    if (i < idx)      el.classList.add('done');
+    else if (i === idx) el.classList.add('active');
+  });
+  const readyMsg = document.getElementById('track-ready-msg');
+  if (readyMsg) readyMsg.classList.toggle('show', status === 'ready' || status === 'completed');
+}
+
+function goToTracker() {
+  if (!lastOrderId) { toast('No active order'); return; }
+  goTo('s-track');
+}
+
+// ── REORDER ──────────────────────────────────────
+function reorder() {
+  if (!lastOrder || !lastOrder.items) return;
+  cart = {};
+  lastOrder.items.forEach(item => {
+    const menuItem = menu.find(m => m.id === item.id || m.name === item.name);
+    if (menuItem && menuItem.avail !== false) {
+      cart[menuItem.id || menuItem.name] = { item: menuItem, qty: item.qty, note: item.note || '' };
+    }
+  });
+  if (Object.keys(cart).length === 0) { toast('Items no longer available'); return; }
+  toast('Cart refilled from last order');
+  goTo('sm');
+}
+  
 // ── PRINT RECEIPT ───────────────────────────────
 function printReceipt() {
   if (!lastOrder) return;
