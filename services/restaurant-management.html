@@ -448,7 +448,7 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
     </div>
     <div class="fg">
       <label class="fl">Date</label>
-      <input type="date" id="resv-date" class="fi">
+      <input type="date" id="resv-date" class="fi" onchange="buildResvTimeGrid()">
     </div>
     <div class="fg">
       <label class="fl">Time Slot</label>
@@ -1637,6 +1637,11 @@ const RESV_TIME_SLOTS = [
 ];
 
 function openResvModal() {
+    // Check if reservations are enabled
+  if (settings.reservationsEnabled === false) {
+    toast(settings.reservationPauseMsg || 'Reservations are currently unavailable.');
+    return;
+  }
   resvGuestCount = 2;
   resvSelectedTable = null;
   resvSelectedTime = null;
@@ -1664,17 +1669,50 @@ function closeResvModal() {
 function buildResvTimeGrid() {
   const grid = document.getElementById('resv-time-grid');
   grid.innerHTML = '';
-  RESV_TIME_SLOTS.forEach(slot => {
+
+  const openTime    = settings.reservationOpenTime    || '15:00';
+  const closeTime   = settings.reservationCloseTime   || '22:00';
+  const intervalMin = settings.reservationSlotInterval || 30;
+
+  const [oh, om] = openTime.split(':').map(Number);
+  const [ch, cm] = closeTime.split(':').map(Number);
+  const openMins  = oh * 60 + om;
+  const closeMins = ch * 60 + cm;
+
+  const selectedDate = document.getElementById('resv-date').value;
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const isToday = selectedDate === todayStr;
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+
+  let hasAny = false;
+  for (let m = openMins; m < closeMins; m += intervalMin) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    const label = `${displayH}:${String(min).padStart(2,'0')} ${ampm}`;
+
+    const isPast = isToday && m <= currentMins + 30; // require 30 min advance notice
+
     const btn = document.createElement('button');
-    btn.className = 'resv-time-btn';
-    btn.textContent = slot;
+    btn.className = 'resv-time-btn' + (isPast ? '' : '');
+    btn.textContent = label;
+    btn.disabled = isPast;
+    if (isPast) btn.style.opacity = '0.3';
     btn.onclick = () => {
-      resvSelectedTime = slot;
+      if (isPast) return;
+      resvSelectedTime = label;
       grid.querySelectorAll('.resv-time-btn').forEach(b => b.classList.remove('sel'));
       btn.classList.add('sel');
     };
     grid.appendChild(btn);
-  });
+    hasAny = true;
+  }
+
+  if (!hasAny) {
+    grid.innerHTML = `<div style="font-size:13px;color:var(--td);grid-column:1/-1;">No slots available for this date.</div>`;
+  }
 }
 
 function buildResvTableGrid() {
