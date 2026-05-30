@@ -698,8 +698,9 @@ function goToDetails() {
   setType(orderType);
 
   // Auto-select table if customer arrived via QR code
-  const urlTable = parseInt(new URLSearchParams(window.location.search).get('table'));
-  if (urlTable > 0) {
+const urlTable = parseInt(new URLSearchParams(window.location.search).get('table'));
+  const maxTables = settings.tableCount || 10;
+  if (urlTable > 0 && urlTable <= maxTables) {
     const btns = document.querySelectorAll('#tbl-grid .tbl-btn');
     if (btns[urlTable - 1]) btns[urlTable - 1].click();
   }
@@ -823,7 +824,7 @@ function makeCard(item) {
     : `<div class="item-photo">${CE[item.cat||item.category]||'🍽'}</div>`;
   const qty = inCart ? cart[item.id].qty : 0;
   card.innerHTML = `
-    ${!item.avail && item.avail!==undefined ? '<span class="unavail-tag">Unavailable</span>' : ''}
+    ${!item.avail && item.avail!==undefined ? '<span class="unavail-tag">Sold Out</span>' : ''}
     ${photoHTML}
     <div class="item-info">
       <div class="item-name">${item.name}</div>
