@@ -1,6 +1,6 @@
 const CACHE_NAME = 'sco-cache-v1';
 const STATIC_ASSETS = [
-  '/services/restaurant-management.html',
+  '/index.html',
   '/manifest.json',
 ];
 
