@@ -758,6 +758,9 @@ function hardReset() {
   orderMode = 'new'; modificationNote = ''; lastOrderTime = null;
   lastOrder = null; lastOrderId = null; tipAmount = 0; custPhone = '';
   payMethod = 'cash'; stripeInstance = null; cardElement = null;
+  loyaltyMember = null; redemptionApplied = false; redemptionAmount = 0;
+  const lb = document.getElementById('loyalty-success-badge');
+  if (lb) lb.remove();
   document.getElementById('cust-name').value = '';
   document.querySelectorAll('.tbl-btn').forEach(b => b.classList.remove('sel'));
   document.getElementById('btn-cash')?.classList.add('active');
@@ -1730,15 +1733,18 @@ if (panel) panel.style.display = 'none';
 function newOrder() {
   cart = {}; orderType = 'dine_in'; selTable = null;
   orderMode = 'new'; modificationNote = ''; lastOrderTime = null;
-    lastOrder = null; lastOrderId = null;
+  lastOrder = null; lastOrderId = null; tipAmount = 0;
   payMethod = 'cash'; stripeInstance = null; cardElement = null;
-const nameInput = document.getElementById('cust-name');
-if (nameInput) nameInput.value = '';
+  loyaltyMember = null; redemptionApplied = false; redemptionAmount = 0;
+  const lb = document.getElementById('loyalty-success-badge');
+  if (lb) lb.remove();
+  const nameInput = document.getElementById('cust-name');
+  if (nameInput) nameInput.value = '';
   document.getElementById('tbl-grid').querySelectorAll('.tbl-btn').forEach(b => b.classList.remove('sel'));
   document.getElementById('btn-cash')?.classList.add('active');
   document.getElementById('btn-card')?.classList.remove('active');
   const cardWrap = document.getElementById('card-element-wrap');
-if (cardWrap) cardWrap.style.display = 'none';
+  if (cardWrap) cardWrap.style.display = 'none';
   goToMenu();
 }
 
