@@ -1099,7 +1099,13 @@ db.collection('settings').doc('global').onSnapshot(snap => {
 // ── RENDER MENU ─────────────────────────────────
 function buildCatBar() {
   const liveCats = (settings.categories && settings.categories.length) ? settings.categories : CATS;
-  const used = [...new Set(menu.filter(i => i.avail !== false).map(i => i.cat || i.category))];
+  const disabledCats = new Set(
+  (settings.categories || []).filter(c => c.enabled === false).map(c => c.id)
+);
+const used = [...new Set(
+  menu.filter(i => i.avail !== false && !disabledCats.has(i.cat || i.category))
+      .map(i => i.cat || i.category)
+)];
   // Sort used cats by the order defined in liveCats
   used.sort((a, b) => {
     const ai = liveCats.findIndex(c => c.id === a);
@@ -1126,7 +1132,13 @@ function renderMenu() {
   const liveCats = (settings.categories && settings.categories.length) ? settings.categories : CATS;
   const con = document.getElementById('m-container');
   con.innerHTML = '';
-const used = [...new Set(menu.filter(i => i.avail !== false).map(i => i.cat || i.category))];
+const disabledCats = new Set(
+  (settings.categories || []).filter(c => c.enabled === false).map(c => c.id)
+);
+const used = [...new Set(
+  menu.filter(i => i.avail !== false && !disabledCats.has(i.cat || i.category))
+      .map(i => i.cat || i.category)
+)];
   // Sort sections by liveCats order
   used.sort((a, b) => {
     const ai = liveCats.findIndex(c => c.id === a);
