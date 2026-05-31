@@ -1531,8 +1531,6 @@ document.getElementById('track-order-btn').style.display = 'flex';
 }
 
 // ── ORDER TRACKER ────────────────────────────────
-let _trackerUnsub = null;
-
 // ── STATUS DEFINITIONS PER ORDER TYPE ────────────────
 function getStatusSteps(orderType) {
   if (orderType === 'takeaway') return [
@@ -1672,11 +1670,6 @@ function startOrderTracker(orderId) {
     const data = snap.data();
     updateTrackerUI(data.status, data.orderType, data.statusTimestamps || {});
   });
-}
-
-function goToTracker() {
-  if (!lastOrderId) { toast('No active order'); return; }
-  goTo('s-track');
 }
 
 function goToTracker() {
