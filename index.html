@@ -405,7 +405,7 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
 <!-- MENU SCREEN -->
 <div id="sm" class="screen">
   <div class="sh">
-    <div class="sh-brand">Spice Korner</div>
+    <div class="sh-brand" id="main-brand">Restaurant</div>
     <div id="h-time" class="sh-sub"></div>
   </div>
   <div class="cat-bar" id="cat-bar"></div>
@@ -1075,9 +1075,8 @@ function tryRender() {
 db.collection('settings').doc('global').onSnapshot(snap => {
   if (snap.exists) {
     const prev = settings.categories ? JSON.stringify(settings.categories) : null;
-    const incoming = snap.data() || {};
-    if (window._nameLockedIn && incoming.restaurantName) delete incoming.restaurantName;
-    settings = {...settings, ...incoming};
+const incoming = snap.data() || {};
+settings = { ...settings, ...incoming };
     const curr = settings.categories ? JSON.stringify(settings.categories) : null;
     // If categories changed and menu is already rendered, re-render live
     if (prev !== null && prev !== curr && settingsReady) {
