@@ -2414,9 +2414,8 @@ setInterval(async ()=>{
       settings = { ...settings, ...snap.data() };
       applySettingsToPortal(settings);
     }
-} catch(e) { console.warn('initWelcome:', e); }
+  } catch(e) { console.warn('initWelcome:', e); }
   finally {
-    window._nameLockedIn = true;
     document.getElementById('sw').style.visibility = 'visible';
   }
 })();
