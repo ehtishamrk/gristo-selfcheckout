@@ -284,6 +284,10 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
 .tracker-ready-banner.show { display:block; }
 .tracker-ready-banner-title { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:700; color:var(--green); margin-bottom:4px; }
 .tracker-ready-banner-sub { font-size:13px; color:var(--tm); }
+  .call-waiter-btn { width:100%; margin-top:18px; padding:14px; background:transparent; border:1px solid rgba(200,146,42,.4); border-radius:var(--r); color:var(--gold); font-size:14px; font-weight:600; letter-spacing:.5px; cursor:pointer; transition:background .2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+.call-waiter-btn:active { background:rgba(200,146,42,.1); }
+.call-waiter-btn.calling { border-color:var(--green); color:var(--green); animation:callPulse 1.2s ease-in-out infinite; }
+@keyframes callPulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 @keyframes bannerPop { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
   
   /* ── TABLE RESERVATION ── */
@@ -517,6 +521,9 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
     <div class="tracker-timeline" id="trk-timeline">
       <!-- built dynamically based on order type -->
     </div>
+    <button class="call-waiter-btn" id="call-waiter-btn" onclick="callWaiter()" style="display:none;">
+      📞 Call Waiter
+    </button>
     <div class="tracker-ready-banner" id="trk-ready-banner">
       <div class="tracker-ready-banner-title" id="trk-ready-title">🎉 Your order is ready!</div>
       <div class="tracker-ready-banner-sub" id="trk-ready-sub">Please collect at the counter</div>
@@ -559,6 +566,10 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
     ➕&nbsp; Add Items To Order
   </button>
 
+<button class="btn btn-ghost" id="call-waiter-ss-btn" onclick="callWaiter()" style="display:none;">
+    📞 Call Waiter
+  </button>
+  
   <button class="btn btn-ghost" onclick="newOrder()">
     New Order
   </button>
@@ -1517,6 +1528,7 @@ document.getElementById('s-wait').textContent =
 document.getElementById('track-order-btn').style.display = 'flex';
   document.getElementById('reorder-btn').style.display = lastOrder ? 'flex' : 'none';
   goTo('ss');
+  showCallWaiterButtons();
   startOrderTracker(lastOrderId);
   setTimeout(() => showPhoneModal(), 1200);
 }
@@ -1666,6 +1678,7 @@ function startOrderTracker(orderId) {
 function goToTracker() {
   if (!lastOrderId) { toast('No active order'); return; }
   goTo('s-track');
+  showCallWaiterButtons();
 }
 
 // ── REORDER ──────────────────────────────────────
@@ -2405,6 +2418,55 @@ setInterval(async ()=>{
   } catch(e){}
 }, 5*60*1000);
 
+// ── CALL WAITER ─────────────────────────────────
+let _callWaiterCooldown = false;
+
+function showCallWaiterButtons() {
+  // Only show if opened via table QR code
+  if (!_isTableQR) return;
+  const btn1 = document.getElementById('call-waiter-btn');
+  const btn2 = document.getElementById('call-waiter-ss-btn');
+  if (btn1) btn1.style.display = 'flex';
+  if (btn2) btn2.style.display = 'block';
+}
+
+async function callWaiter() {
+  if (!_isTableQR) return;
+  if (_callWaiterCooldown) { toast('Waiter already called — please wait'); return; }
+  if (!db) { toast('Not connected', 'error'); return; }
+
+  const tableNum = _urlTable;
+  const btn1 = document.getElementById('call-waiter-btn');
+  const btn2 = document.getElementById('call-waiter-ss-btn');
+
+  try {
+    _callWaiterCooldown = true;
+    if (btn1) { btn1.classList.add('calling'); btn1.textContent = '📞 Calling...'; }
+    if (btn2) { btn2.textContent = '📞 Calling...'; }
+
+    await db.collection('waiter_calls').add({
+      tableNumber:  tableNum,
+      calledBy:     `Table ${tableNum}`,
+      orderNumber:  lastOrder?.orderNumber || 0,
+      status:       'ringing',
+      acknowledged: false,
+      calledAt:     firebase.firestore.FieldValue.serverTimestamp(),
+      source:       'customer'
+    });
+
+    toast('Waiter has been called! 🔔');
+    setTimeout(() => {
+      _callWaiterCooldown = false;
+      if (btn1) { btn1.classList.remove('calling'); btn1.textContent = '📞 Call Waiter'; }
+      if (btn2) { btn2.textContent = '📞 Call Waiter'; }
+    }, 30000); // 30-second cooldown
+  } catch(e) {
+    _callWaiterCooldown = false;
+    toast('Could not call waiter', 'error');
+    console.warn('callWaiter:', e);
+  }
+}
+  
 // Fetch settings before revealing welcome screen — prevents any name flash
 (async function initWelcome() {
   if (!db) { document.getElementById('sw').style.visibility = 'visible'; return; }
