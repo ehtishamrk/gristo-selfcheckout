@@ -1846,8 +1846,8 @@ function applySettingsToPortal(s) {
     const enabled = s.reservationsEnabled !== false;
     const mode = s.reservationOffMode || 'message'; // 'hide' or 'message'
     if (enabled) {
-      // Reservations are ON — show button normally
-      resvBtn.style.display = '';
+// Reservations are ON — hide if table QR session
+      resvBtn.style.display = _isTableQR ? 'none' : '';
       resvBtn.onclick = openResvModal;
       resvBtn.style.opacity = '1';
       resvBtn.title = '';
