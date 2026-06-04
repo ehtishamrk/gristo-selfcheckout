@@ -332,7 +332,7 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
     <h2 class="ot-select-title">How are you ordering?</h2>
     <p class="ot-select-sub">Choose your order type to continue</p>
     <div class="ot-cards">
-      <button class="ot-card" onclick="selectOrderType('dine_in')">
+      <button class="ot-card" id="dine-in-type-btn" onclick="selectOrderType('dine_in')">
         <span class="ot-card-icon">🍽</span>
         <div class="ot-card-text">
           <div class="ot-card-title">Dine In</div>
@@ -947,7 +947,8 @@ async function goToMenu() {
     // Show delivery option only if admin has enabled it
     const delivBtn = document.getElementById('delivery-type-btn');
     if (delivBtn) delivBtn.style.display = settings.deliveryEnabled ? 'flex' : 'none';
-    goTo('s-ordertype');
+    document.getElementById('dine-in-type-btn').style.display = 'none';
+goTo('s-ordertype');
   }
 }
 
@@ -1045,17 +1046,17 @@ function goToDetails() {
     // Also hide the order type toggle — it's locked to dine-in
     document.querySelector('.ot-toggle')?.style && (document.querySelector('#sd .ot-toggle').style.display = 'none');
     document.querySelector('#sd .sec-title') && (document.querySelector('#sd .sec-title').style.display = 'none');
-  } else {
-    // Show order type toggle for non-QR sessions
-    const toggle = document.querySelector('#sd .ot-toggle');
-    if (toggle) toggle.style.display = 'flex';
-    const title = document.querySelector('#sd .sec-title');
-    if (title) title.style.display = 'block';
-    // For delivery, hide table section entirely
-    if (orderType === 'delivery') {
-      document.getElementById('tbl-sec').style.display = 'none';
-    }
+} else {
+  // Show order type toggle for non-QR sessions
+  const toggle = document.querySelector('#sd .ot-toggle');
+  if (toggle) toggle.style.display = 'flex';
+  const title = document.querySelector('#sd .sec-title');
+  if (title) title.style.display = 'block';
+  // For delivery, hide table section entirely
+  if (orderType === 'delivery') {
+    document.getElementById('tbl-sec').style.display = 'none';
   }
+}
 
   goTo('sd');
 }
