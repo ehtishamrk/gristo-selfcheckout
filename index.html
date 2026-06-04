@@ -1042,6 +1042,12 @@ function tryRender() {
     buildCatBar();
   }
 
+// ── KITCHEN HOURS AUTO-CLOCK ──────────────────────
+// Checks every 60s so the portal auto-pauses when kitchen closes mid-session
+setInterval(() => {
+  if (settingsReady && settings) applySettingsToPortal(settings);
+}, 60000);
+  
   db.collection('menu_items').onSnapshot(snap => {
     menu = snap.empty ? DEFAULT_MENU : snap.docs.map(d => ({...d.data(), id: d.id}));
     menuReady = true;
@@ -1819,12 +1825,19 @@ function applySettingsToPortal(s) {
     const ws = document.querySelector('.ws');
     if (ws) ws.textContent = s.tagline;
   }
-  // Ordering pause real-time check
-  if (s.orderingPaused) {
+// Ordering pause real-time check — manual toggle OR auto kitchen hours
+  const effectivelyPaused = isKitchenClosed(s);
+  if (effectivelyPaused) {
     const current = document.querySelector('.screen.active');
-    if (current && (current.id==='sw' || current.id==='sm')) {
+    if (current && current.id !== 's-paused') {
       document.getElementById('paused-msg-text').textContent = s.pauseMessage || "We're not taking orders right now.";
       goTo('s-paused');
+    }
+  } else {
+    // If we're on the paused screen and kitchen is now open, go back to welcome
+    const current = document.querySelector('.screen.active');
+    if (current && current.id === 's-paused') {
+      goTo('sw');
     }
   }
 // Loyalty program
@@ -1856,6 +1869,23 @@ function applySettingsToPortal(s) {
   }
 }
 
+// ── KITCHEN HOURS HELPER ─────────────────────────
+function isKitchenClosed(s) {
+  // Manual pause always wins
+  if (s.orderingPaused) return true;
+  // If no schedule set, kitchen is open
+  if (!s.kitchenOpenTime || !s.kitchenCloseTime) return false;
+  // Parse HH:MM into minutes-since-midnight
+  const toMins = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const now    = new Date();
+  const cur    = now.getHours() * 60 + now.getMinutes();
+  const open   = toMins(s.kitchenOpenTime);
+  const close  = toMins(s.kitchenCloseTime);
+  // Handle overnight schedules (e.g. 22:00–02:00)
+  if (close < open) return cur < open && cur >= close;
+  return cur < open || cur >= close;
+}
+  
 // ── TIP LOGIC ────────────────────────────────────
 function selectTip(val) {
   const cur = settings.currencySymbol || '$';
