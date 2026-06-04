@@ -457,10 +457,14 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
       <button class="ot-opt active" id="btn-di" onclick="setType('dine_in')">🍽&nbsp; Dine In</button>
       <button class="ot-opt" id="btn-to" onclick="setType('takeaway')">📦&nbsp; Takeaway</button>
     </div>
-    <div class="fg">
-      <label class="fl">Your Name</label>
-      <input type="text" id="cust-name" class="fi" placeholder="Enter your name" autocomplete="given-name" maxlength="50">
-    </div>
+<div class="fg">
+  <label class="fl">Your Name</label>
+  <input type="text" id="cust-name" class="fi" placeholder="Enter your name" autocomplete="given-name" maxlength="50">
+</div>
+<div class="fg">
+  <label class="fl">Phone Number <span style="font-size:10px;color:var(--tm);font-weight:400;">(optional)</span></label>
+  <input type="tel" id="cust-phone-input" class="fi" placeholder="e.g. 03001234567" autocomplete="tel" maxlength="20">
+</div>
     <div id="tbl-sec">
       <div class="fg">
         <label class="fl">Select Table</label>
