@@ -1054,42 +1054,39 @@ setInterval(() => {
     tryRender();
   }, e => { console.warn('menu listener:', e); menu = DEFAULT_MENU; menuReady = true; tryRender(); });
 
-  db.collection('deals').onSnapshot(snap => {
+db.collection('deals').onSnapshot(snap => {
     deals = snap.docs.map(d => ({...d.data(), id: d.id}));
     dealsReady = true;
     tryRender();
   }, e => { console.warn('deals listener:', e); dealsReady = true; tryRender(); });
-}
 
-  // ── SETTINGS LISTENER (top-level — always active from page load) ─────────
-db.collection('settings').doc('global').onSnapshot(snap => {
-  if (snap.exists) {
-    const incoming = snap.data() || {};
-    const prev = settings.categories ? JSON.stringify(settings.categories) : null;
-    settings = { ...settings, ...incoming };
-    const curr = settings.categories ? JSON.stringify(settings.categories) : null;
-    // If categories changed and menu is already rendered, re-render live
-    if (prev !== null && prev !== curr && typeof renderMenu === 'function' && document.getElementById('m-container')?.children.length > 0) {
-      renderMenu();
-      buildCatBar();
+  db.collection('settings').doc('global').onSnapshot(snap => {
+    if (snap.exists) {
+      const incoming = snap.data() || {};
+      const prev = settings.categories ? JSON.stringify(settings.categories) : null;
+      settings = { ...settings, ...incoming };
+      const curr = settings.categories ? JSON.stringify(settings.categories) : null;
+      if (prev !== null && prev !== curr && typeof renderMenu === 'function' && document.getElementById('m-container')?.children.length > 0) {
+        renderMenu();
+        buildCatBar();
+      }
     }
-  }
-  applySettingsToPortal(settings);
-  const sec = document.getElementById('pay-method-sec');
-  if (sec) sec.style.display = settings.cardPaymentsEnabled ? 'block' : 'none';
-  const tipSec = document.getElementById('tip-sec');
-  if (tipSec) tipSec.style.display = (settings.cardPaymentsEnabled && settings.tipEnabled && payMethod==='card') ? 'block' : 'none';
-  if (!settings.cardPaymentsEnabled && payMethod === 'card') setPayMethod('cash');
-  // Real-time delivery toggle
-  const delivBtn = document.getElementById('delivery-type-btn');
-  if (delivBtn && !_isTableQR) delivBtn.style.display = settings.deliveryEnabled ? 'flex' : 'none';
-  // Re-calculate cart totals live if cart is already showing
-  if (document.getElementById('cart-screen')?.style.display !== 'none' ||
-      document.getElementById('checkout-screen')?.style.display !== 'none') {
-    updateCartSummary();
-  }
-}, e => { console.warn('settings listener:', e); });
-
+    applySettingsToPortal(settings);
+    const sec = document.getElementById('pay-method-sec');
+    if (sec) sec.style.display = settings.cardPaymentsEnabled ? 'block' : 'none';
+    const tipSec = document.getElementById('tip-sec');
+    if (tipSec) tipSec.style.display = (settings.cardPaymentsEnabled && settings.tipEnabled && payMethod==='card') ? 'block' : 'none';
+    if (!settings.cardPaymentsEnabled && payMethod === 'card') setPayMethod('cash');
+    const delivBtn = document.getElementById('delivery-type-btn');
+    if (delivBtn && !_isTableQR) delivBtn.style.display = settings.deliveryEnabled ? 'flex' : 'none';
+    if (document.getElementById('cart-screen')?.style.display !== 'none' ||
+        document.getElementById('checkout-screen')?.style.display !== 'none') {
+      updateCartSummary();
+    }
+    settingsReady = true;
+    tryRender();
+  }, e => { console.warn('settings listener:', e); settingsReady = true; tryRender(); });
+}
 // ── RENDER MENU ─────────────────────────────────
 function buildCatBar() {
   const liveCats = (settings.categories && settings.categories.length) ? settings.categories : CATS;
