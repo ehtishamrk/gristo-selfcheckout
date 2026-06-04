@@ -1871,8 +1871,10 @@ function applySettingsToPortal(s) {
 
 // ── KITCHEN HOURS HELPER ─────────────────────────
 function isKitchenClosed(s) {
-  // Manual pause always wins
+  // Manual pause always wins — if admin toggled pause ON, closed regardless of schedule
   if (s.orderingPaused) return true;
+  // Admin manually forced open (toggled OFF while schedule would close) — override schedule
+  if (s.kitchenOverride === true) return false;
   // If no schedule set, kitchen is open
   if (!s.kitchenOpenTime || !s.kitchenCloseTime) return false;
   // Parse HH:MM into minutes-since-midnight
