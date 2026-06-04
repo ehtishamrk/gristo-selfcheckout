@@ -1072,8 +1072,13 @@ settings = { ...settings, ...incoming };
   const tipSec = document.getElementById('tip-sec');
   if (tipSec) tipSec.style.display = (settings.cardPaymentsEnabled && settings.tipEnabled && payMethod==='card') ? 'block' : 'none';
   if (!settings.cardPaymentsEnabled && payMethod === 'card') setPayMethod('cash');
-  settingsReady = true;
+settingsReady = true;
   tryRender();
+  // Re-calculate cart totals live if cart is already showing
+  if (document.getElementById('cart-screen')?.style.display !== 'none' ||
+      document.getElementById('checkout-screen')?.style.display !== 'none') {
+    updateCartSummary();
+  }
 }, e => { console.warn('settings listener:', e); settingsReady = true; tryRender(); });
 }
 
@@ -1260,10 +1265,10 @@ function updateCartSummary() {
   const save = parseFloat((orig - sub).toFixed(2));
 
   // Tax
-  const taxRate  = (settings.taxRate  || 0) / 100;
-  const svcRate  = (settings.serviceCharge || 0) / 100;
+  const taxRate  = (settings.taxEnabled !== false && settings.taxRate) ? settings.taxRate / 100 : 0;
+  const svcRate  = (settings.serviceChargeEnabled === true && settings.serviceCharge) ? settings.serviceCharge / 100 : 0;
   const taxAmt   = parseFloat((sub * taxRate).toFixed(2));
-  const svcAmt   = parseFloat((sub * svcRate).toFixed(2));
+  const svcAmt   = parseFloat((sub * (orderType === 'dine_in' ? svcRate : 0)).toFixed(2));
 
   document.getElementById('c-subtotal').textContent = cur + sub.toFixed(2);
 
@@ -1391,10 +1396,10 @@ if (enteredPhone && db) {
   });
 
 const sub      = cartTotal();
-const taxRate  = (settings.taxRate       || 0) / 100;
-const svcRate  = (settings.serviceCharge || 0) / 100;
+const taxRate  = (settings.taxEnabled !== false && settings.taxRate) ? settings.taxRate / 100 : 0;
+const svcRate  = (settings.serviceChargeEnabled === true && settings.serviceCharge) ? settings.serviceCharge / 100 : 0;
 const taxAmt   = parseFloat((sub * taxRate).toFixed(2));
-const svcAmt   = parseFloat((sub * svcRate).toFixed(2));
+const svcAmt   = parseFloat((sub * (orderType === 'dine_in' ? svcRate : 0)).toFixed(2));
 const grandTotal = parseFloat((sub + taxAmt + svcAmt + tipAmount).toFixed(2));
 
 const order = {
@@ -1868,11 +1873,11 @@ function updateCustomTip(v) {
 
 function cartTotalWithTax() {
   const sub = cartTotal();
-  const tax = sub * (settings.taxRate||0)/100;
-  const svc = sub * (settings.serviceCharge||0)/100;
+  const tax = (settings.taxEnabled !== false && settings.taxRate) ? sub * settings.taxRate / 100 : 0;
+  const svcRate = (settings.serviceChargeEnabled === true && settings.serviceCharge) ? settings.serviceCharge / 100 : 0;
+  const svc = orderType === 'dine_in' ? sub * svcRate : 0;
   return sub + tax + svc;
 }
-
 // ── PHONE CAPTURE ─────────────────────────────
 function formatPhoneInput(input) {
   let v = input.value.replace(/\D/g,'');
@@ -1918,11 +1923,23 @@ async function submitPhone() {
 }
 
 async function finishPhoneFlow() {
-const modal = document.getElementById('phone-modal-overlay');
-if (modal) modal.classList.remove('show');
-  if (db && lastOrder) {
-    const lead = { phone: custPhone, name: lastOrder.customerName||'', orderNumber: lastOrder.orderNumber, orderType: lastOrder.orderType||'', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-    db.collection('phone_leads').add(lead).catch(()=>{});
+  const modal = document.getElementById('phone-modal-overlay');
+  if (modal) modal.classList.remove('show');
+  if (db && lastOrder && custPhone) {
+    const cleanPhone = custPhone.replace(/\D/g, '');
+    const lead = {
+      phone: custPhone,
+      name: lastOrder.customerName || '',
+      orderNumber: lastOrder.orderNumber,
+      orderType: lastOrder.orderType || '',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    // Use phone number as document ID to prevent duplicate entries per customer
+    try {
+      await db.collection('phone_leads').doc(cleanPhone).set(lead, { merge: true });
+    } catch(e) {
+      console.warn('phone_leads save error:', e);
+    }
     if (settings.loyaltyEnabled) await upsertLoyaltyMember(lastOrder);
   }
   // Reset redemption state for next order
