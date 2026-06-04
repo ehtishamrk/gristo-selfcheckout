@@ -1399,8 +1399,22 @@ function addItemsToOrder() {
 }
 // ── PLACE ORDER ─────────────────────────────────
 async function placeOrder() {
-  const name = document.getElementById('cust-name').value.trim();
-  if (!name)                                  { toast('Please enter your name');        return; }
+const name = document.getElementById('cust-name').value.trim();
+if (!name) { toast('Please enter your name'); return; }
+const enteredPhone = document.getElementById('cust-phone-input').value.trim().replace(/\D/g, '');
+if (enteredPhone && db) {
+  const phoneRef = db.collection('guest_phonebook').doc(enteredPhone);
+  phoneRef.get().then(doc => {
+    if (!doc.exists) {
+      phoneRef.set({
+        phone: enteredPhone,
+        name: name || '',
+        firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        source: 'checkout'
+      });
+    }
+  }).catch(() => {});
+}
   if (orderType === 'dine_in' && !selTable)   { toast('Please select a table');         return; }
   if (cartCount() === 0)                      { toast('Your cart is empty');            return; }
 
