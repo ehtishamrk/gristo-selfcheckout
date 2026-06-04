@@ -319,7 +319,7 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
     <p class="ws">Self Checkout</p>
 <div id="sw-action" style="display:flex;flex-direction:column;align-items:center;gap:12px;">
   <button class="btn btn-gold" id="start-btn" onclick="goToMenu()">Start Ordering →</button>
-  <button class="btn btn-ghost" onclick="openResvModal()" style="padding:12px 36px;font-size:13.5px;">📅 Reserve a Table</button>
+  <button class="btn btn-ghost" id="resv-landing-btn" onclick="openResvModal()" style="padding:12px 36px;font-size:13.5px;">📅 Reserve a Table</button>
 </div>
     <p class="wf">Scan • Select • Enjoy</p>
   </div>
@@ -1834,9 +1834,32 @@ function applySettingsToPortal(s) {
       goTo('s-paused');
     }
   }
-  // Loyalty program
+// Loyalty program
   if (s.loyaltyEnabled && s.loyaltyProgram) {
     updateLoyaltyUI(s.loyaltyProgram);
+  }
+  // Reservation button — react in real-time to admin toggle
+  const resvBtn = document.getElementById('resv-landing-btn');
+  if (resvBtn) {
+    const enabled = s.reservationsEnabled !== false;
+    const mode = s.reservationOffMode || 'message'; // 'hide' or 'message'
+    if (enabled) {
+      // Reservations are ON — show button normally
+      resvBtn.style.display = '';
+      resvBtn.onclick = openResvModal;
+      resvBtn.style.opacity = '1';
+      resvBtn.title = '';
+    } else if (mode === 'hide') {
+      // Reservations are OFF, hide mode — remove button entirely
+      resvBtn.style.display = 'none';
+    } else {
+      // Reservations are OFF, message mode — show button but intercept click
+      resvBtn.style.display = '';
+      resvBtn.style.opacity = '0.6';
+      const msg = s.reservationPauseMsg || "Sorry, we're not accepting reservations right now.";
+      resvBtn.onclick = () => toast(msg);
+      resvBtn.title = msg;
+    }
   }
 }
 
