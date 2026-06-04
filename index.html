@@ -452,11 +452,6 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
     <div class="sh-brand">Your Details</div>
   </div>
   <div class="d-content">
-    <p class="sec-title">How would you like your order?</p>
-    <div class="ot-toggle">
-      <button class="ot-opt active" id="btn-di" onclick="setType('dine_in')">🍽&nbsp; Dine In</button>
-      <button class="ot-opt" id="btn-to" onclick="setType('takeaway')">📦&nbsp; Takeaway</button>
-    </div>
 <div class="fg">
   <label class="fl">Your Name</label>
   <input type="text" id="cust-name" class="fi" placeholder="Enter your name" autocomplete="given-name" maxlength="50">
@@ -465,12 +460,6 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
   <label class="fl">Phone Number <span style="font-size:10px;color:var(--tm);font-weight:400;">(optional)</span></label>
   <input type="tel" id="cust-phone-input" class="fi" placeholder="e.g. 03001234567" autocomplete="tel" maxlength="20">
 </div>
-    <div id="tbl-sec">
-      <div class="fg">
-        <label class="fl">Select Table</label>
-        <div class="tbl-grid" id="tbl-grid"></div>
-      </div>
-    </div>
   </div>
   <!-- TIP SELECTOR (shown for card payments when enabled) -->
 <div id="tip-sec" style="display:none;padding:0 18px 4px;">
@@ -1035,29 +1024,6 @@ if (tipSec) {
 function goToCart() { renderCart(); goTo('sc'); }
 function goToDetails() {
   if (cartCount() === 0) { toast('Add items to your order first'); return; }
-
-  buildTableGrid();
-  setType(orderType);
-
-  // If table QR — lock table, hide the entire table section header
-  if (_isTableQR) {
-    selTable = _urlTable;
-    document.getElementById('tbl-sec').style.display = 'none';
-    // Also hide the order type toggle — it's locked to dine-in
-    document.querySelector('.ot-toggle')?.style && (document.querySelector('#sd .ot-toggle').style.display = 'none');
-    document.querySelector('#sd .sec-title') && (document.querySelector('#sd .sec-title').style.display = 'none');
-} else {
-  // Show order type toggle for non-QR sessions
-  const toggle = document.querySelector('#sd .ot-toggle');
-  if (toggle) toggle.style.display = 'flex';
-  const title = document.querySelector('#sd .sec-title');
-  if (title) title.style.display = 'block';
-  // For delivery, hide table section entirely
-  if (orderType === 'delivery') {
-    document.getElementById('tbl-sec').style.display = 'none';
-  }
-}
-
   goTo('sd');
 }
 
@@ -1416,7 +1382,7 @@ if (enteredPhone && db) {
     }
   }).catch(() => {});
 }
-  if (orderType === 'dine_in' && !selTable)   { toast('Please select a table');         return; }
+  
   if (cartCount() === 0)                      { toast('Your cart is empty');            return; }
 
   const items = Object.values(cart).map(e => {
