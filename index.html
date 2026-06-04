@@ -1072,7 +1072,10 @@ settings = { ...settings, ...incoming };
   const tipSec = document.getElementById('tip-sec');
   if (tipSec) tipSec.style.display = (settings.cardPaymentsEnabled && settings.tipEnabled && payMethod==='card') ? 'block' : 'none';
   if (!settings.cardPaymentsEnabled && payMethod === 'card') setPayMethod('cash');
-settingsReady = true;
+  // Real-time delivery toggle — update button visibility whenever settings change
+  const delivBtn = document.getElementById('delivery-type-btn');
+  if (delivBtn && !_isTableQR) delivBtn.style.display = settings.deliveryEnabled ? 'flex' : 'none';
+  settingsReady = true;
   tryRender();
   // Re-calculate cart totals live if cart is already showing
   if (document.getElementById('cart-screen')?.style.display !== 'none' ||
