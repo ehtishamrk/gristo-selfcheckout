@@ -1422,7 +1422,7 @@ const order = {
   total:             grandTotal,
   origTotal:         cartOrig() + taxAmt + svcAmt,
   savings:           parseFloat((cartOrig() - cartTotal()).toFixed(2)),
-  timestamp:         new Date(),
+  timestamp:         firebase.firestore.Timestamp.fromDate(new Date()),
   orderTypeMode:     orderMode,
   parentOrderNumber: orderMode !== 'new' ? lastOrder?.orderNumber : null,
   modificationNote:  orderMode !== 'new' ? modificationNote       : '',
