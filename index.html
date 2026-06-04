@@ -1403,7 +1403,7 @@ const name = document.getElementById('cust-name').value.trim();
 if (!name) { toast('Please enter your name'); return; }
 const enteredPhone = document.getElementById('cust-phone-input').value.trim().replace(/\D/g, '');
 if (enteredPhone && db) {
-  const phoneRef = db.collection('guest_phonebook').doc(enteredPhone);
+  const phoneRef = db.collection('phone_leads').doc(enteredPhone);
   phoneRef.get().then(doc => {
     if (!doc.exists) {
       phoneRef.set({
