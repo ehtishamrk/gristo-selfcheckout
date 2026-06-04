@@ -1059,15 +1059,17 @@ setInterval(() => {
     dealsReady = true;
     tryRender();
   }, e => { console.warn('deals listener:', e); dealsReady = true; tryRender(); });
+}
 
+  // ── SETTINGS LISTENER (top-level — always active from page load) ─────────
 db.collection('settings').doc('global').onSnapshot(snap => {
   if (snap.exists) {
+    const incoming = snap.data() || {};
     const prev = settings.categories ? JSON.stringify(settings.categories) : null;
-const incoming = snap.data() || {};
-settings = { ...settings, ...incoming };
+    settings = { ...settings, ...incoming };
     const curr = settings.categories ? JSON.stringify(settings.categories) : null;
     // If categories changed and menu is already rendered, re-render live
-    if (prev !== null && prev !== curr && settingsReady) {
+    if (prev !== null && prev !== curr && typeof renderMenu === 'function' && document.getElementById('m-container')?.children.length > 0) {
       renderMenu();
       buildCatBar();
     }
@@ -1078,18 +1080,15 @@ settings = { ...settings, ...incoming };
   const tipSec = document.getElementById('tip-sec');
   if (tipSec) tipSec.style.display = (settings.cardPaymentsEnabled && settings.tipEnabled && payMethod==='card') ? 'block' : 'none';
   if (!settings.cardPaymentsEnabled && payMethod === 'card') setPayMethod('cash');
-  // Real-time delivery toggle — update button visibility whenever settings change
+  // Real-time delivery toggle
   const delivBtn = document.getElementById('delivery-type-btn');
   if (delivBtn && !_isTableQR) delivBtn.style.display = settings.deliveryEnabled ? 'flex' : 'none';
-  settingsReady = true;
-  tryRender();
   // Re-calculate cart totals live if cart is already showing
   if (document.getElementById('cart-screen')?.style.display !== 'none' ||
       document.getElementById('checkout-screen')?.style.display !== 'none') {
     updateCartSummary();
   }
-}, e => { console.warn('settings listener:', e); settingsReady = true; tryRender(); });
-}
+}, e => { console.warn('settings listener:', e); });
 
 // ── RENDER MENU ─────────────────────────────────
 function buildCatBar() {
@@ -1923,7 +1922,8 @@ function formatPhoneInput(input) {
 }
 
 function showPhoneModal() {
-  if (!settings.loyaltyEnabled) { completeOrderFlow(); return; }
+  // Always show phone modal to capture number for guest book,
+  // regardless of whether loyalty programme is enabled
   const lp = settings.loyaltyProgram || {};
   document.getElementById('pm-program-name').textContent    = lp.name || 'our rewards program';
   document.getElementById('pm-earn-text').textContent       = `Earn ${lp.pointsPerDollar||1} point per $1 spent`;
@@ -1931,7 +1931,6 @@ function showPhoneModal() {
   document.getElementById('phone-modal-overlay').classList.add('show');
   setTimeout(()=>document.getElementById('phone-input').focus(), 400);
 }
-
 async function submitPhone() {
   const raw = document.getElementById('phone-input').value.replace(/\D/g,'');
   if (raw.length < 10) {
