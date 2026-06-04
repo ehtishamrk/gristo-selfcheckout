@@ -2490,19 +2490,30 @@ async function callWaiter() {
   }
 }
   
-// Fetch settings before revealing welcome screen — prevents any name flash
-(async function initWelcome() {
+// Real-time settings listener for welcome screen — keeps reservation toggle in sync
+// without needing a page refresh. Uses onSnapshot so any admin change (e.g. toggling
+// reservations on/off) is reflected instantly on the customer portal.
+(function initWelcome() {
   if (!db) { document.getElementById('sw').style.visibility = 'visible'; return; }
-  try {
-    db.collection('settings').doc('global').onSnapshot(snap => { ... });
+  let revealed = false;
+  db.collection('settings').doc('global').onSnapshot(snap => {
     if (snap.exists) {
       settings = { ...settings, ...snap.data() };
       applySettingsToPortal(settings);
     }
-  } catch(e) { console.warn('initWelcome:', e); }
-  finally {
-    document.getElementById('sw').style.visibility = 'visible';
-  }
+    // Reveal welcome screen on first snapshot (replaces the old one-time get)
+    if (!revealed) {
+      revealed = true;
+      document.getElementById('sw').style.visibility = 'visible';
+    }
+  }, e => {
+    console.warn('initWelcome settings listener:', e);
+    // Still reveal screen even if listener fails
+    if (!revealed) {
+      revealed = true;
+      document.getElementById('sw').style.visibility = 'visible';
+    }
+  });
 })();
 
 // PWA
