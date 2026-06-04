@@ -2494,7 +2494,7 @@ async function callWaiter() {
 (async function initWelcome() {
   if (!db) { document.getElementById('sw').style.visibility = 'visible'; return; }
   try {
-    const snap = await db.collection('settings').doc('global').get();
+    db.collection('settings').doc('global').onSnapshot(snap => { ... });
     if (snap.exists) {
       settings = { ...settings, ...snap.data() };
       applySettingsToPortal(settings);
