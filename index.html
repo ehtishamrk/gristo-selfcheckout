@@ -10,6 +10,7 @@
 <title>Self Checkout</title>
 <link rel="manifest" id="manifest-placeholder" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="icon" id="favicon" type="image/png" href="">
   <script src="https://js.stripe.com/v3/"></script>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -1709,6 +1710,11 @@ const taxAmt   = (o.taxAmount     || 0).toFixed(2);
 const tipAmt   = (o.tipAmount     || 0).toFixed(2);
 const svcAmt   = (o.serviceCharge || 0).toFixed(2);
 
+const logoBase64 = settings.restaurantLogo || '';
+const logoHtml = logoBase64
+  ? `<div class="c" style="margin-bottom:4px"><img src="${logoBase64}" style="max-height:48px;max-width:120px;object-fit:contain;"></div>`
+  : `<div class="c b" style="font-size:20px;letter-spacing:5px">${restName}</div><div class="c" style="font-size:8px;letter-spacing:2px;margin-bottom:2px">RESTAURANT</div>`;
+
 win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
   @page{margin:4mm;size:80mm auto}
@@ -1719,8 +1725,7 @@ win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   table{width:100%;border-collapse:collapse}
   .gt td{font-weight:bold;font-size:13px;border-top:1px solid #000;padding-top:5px}
 </style></head><body>
-<div class="c b" style="font-size:20px;letter-spacing:5px">${restName}</div>
-<div class="c" style="font-size:8px;letter-spacing:2px;margin-bottom:2px">RESTAURANT</div>
+${logoHtml}
 <hr>
 <div style="font-size:10px;line-height:1.6">
   <div>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
@@ -1788,6 +1793,22 @@ function applySettingsToPortal(s) {
     if (bc.surface) { root.style.setProperty('--surface', bc.surface); root.style.setProperty('--s2', bc.surface); }
     if (bc.text)    root.style.setProperty('--text', bc.text);
   }
+
+// Apply restaurant logo
+  if (s.restaurantLogo) {
+    // All login-logo elements (text → image)
+    document.querySelectorAll('.login-logo-img').forEach(el => {
+      el.src = s.restaurantLogo; el.style.display = 'block';
+    });
+    document.querySelectorAll('.login-logo-text').forEach(el => el.style.display = 'none');
+    // Favicon
+    let fav = document.getElementById('favicon');
+    if (fav) fav.setAttribute('href', s.restaurantLogo);
+  } else {
+    document.querySelectorAll('.login-logo-img').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.login-logo-text').forEach(el => el.style.display = '');
+  }
+  
   // Apply restaurant name — all instances including welcome screen
   if (s.restaurantName) {
     document.querySelectorAll('.sh-brand').forEach(el => el.textContent = s.restaurantName);
