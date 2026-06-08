@@ -315,7 +315,8 @@ button, .qbtn, .cat-chip { touch-action: manipulation; }
 <div id="sw" class="screen active" style="visibility:hidden;">
   <div class="wb"></div>
   <div class="wc">
-    <div class="logo-ring"><span class="logo-g">G</span></div>
+<div class="logo-ring" id="sc-logo-ring"><span class="logo-g" id="sc-logo-g">G</span></div>
+    <img id="sc-logo-img" src="" alt="" style="display:none;max-height:96px;max-width:220px;object-fit:contain;margin:0 auto 28px;">
     <h1 class="wt">Spice Korner</h1>
     <p class="ws">Self Checkout</p>
 <div id="sw-action" style="display:flex;flex-direction:column;align-items:center;gap:12px;">
@@ -1795,18 +1796,16 @@ function applySettingsToPortal(s) {
   }
 
 // Apply restaurant logo
+  const scLogoImg  = document.getElementById('sc-logo-img');
+  const scLogoRing = document.getElementById('sc-logo-ring');
   if (s.restaurantLogo) {
-    // All login-logo elements (text → image)
-    document.querySelectorAll('.login-logo-img').forEach(el => {
-      el.src = s.restaurantLogo; el.style.display = 'block';
-    });
-    document.querySelectorAll('.login-logo-text').forEach(el => el.style.display = 'none');
-    // Favicon
+    if (scLogoImg)  { scLogoImg.src = s.restaurantLogo; scLogoImg.style.display = 'block'; }
+    if (scLogoRing) scLogoRing.style.display = 'none';
     let fav = document.getElementById('favicon');
     if (fav) fav.setAttribute('href', s.restaurantLogo);
   } else {
-    document.querySelectorAll('.login-logo-img').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.login-logo-text').forEach(el => el.style.display = '');
+    if (scLogoImg)  scLogoImg.style.display = 'none';
+    if (scLogoRing) scLogoRing.style.display = 'flex';
   }
   
   // Apply restaurant name — all instances including welcome screen
