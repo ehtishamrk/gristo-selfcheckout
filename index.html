@@ -1340,12 +1340,13 @@ function buildTableGrid() {
   }
 }
 
-  function canModifyOrder() {
-  if (!lastOrderTime) return false;
-
-  const fiveMinutes = 5 * 60 * 1000;
-  return (Date.now() - lastOrderTime) <= fiveMinutes;
-}
+function canModifyOrder() {
+    if (!lastOrderTime) return false;
+    if (settings.orderEditCustomer === false) return false;
+    const mins = settings.orderEditWindow ?? 5;
+    if (mins === 0) return false;
+    return (Date.now() - lastOrderTime) <= (mins * 60 * 1000);
+  }
 function viewOrder() {
   renderCart();
   goTo('sc');
@@ -1353,7 +1354,7 @@ function viewOrder() {
 
 function editOrder() {
   if (!canModifyOrder()) {
-    toast('Order can only be edited within 5 minutes');
+    toast(`Order can only be modified within ${settings.orderEditWindow ?? 5} minutes`);
     return;
   }
 
@@ -1366,7 +1367,7 @@ function editOrder() {
 
 function addItemsToOrder() {
   if (!canModifyOrder()) {
-    toast('You can only add items within 5 minutes');
+    toast(`Order can only be modified within ${settings.orderEditWindow ?? 5} minutes`);
     return;
   }
 
