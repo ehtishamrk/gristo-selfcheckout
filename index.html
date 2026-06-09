@@ -1879,9 +1879,15 @@ function applySettingsToPortal(s) {
       resvBtn.style.display = '';
       resvBtn.style.opacity = '0.6';
       const msg = s.reservationPauseMsg || "Sorry, we're not accepting reservations right now.";
-      resvBtn.onclick = () => toast(msg);
+resvBtn.onclick = () => toast(msg);
       resvBtn.title = msg;
     }
+  }
+
+  // Real-time delivery toggle — update button visibility whenever settings change
+  const delivBtn = document.getElementById('delivery-type-btn');
+  if (delivBtn && !_isTableQR) {
+    delivBtn.style.display = s.deliveryEnabled ? 'flex' : 'none';
   }
 }
 
